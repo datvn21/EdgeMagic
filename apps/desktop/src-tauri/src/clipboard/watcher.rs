@@ -36,6 +36,7 @@ const CF_UNICODETEXT: u32 = 13;
 const CF_HDROP: u32 = 15;
 const CF_DIBV5: u32 = 17;
 const CF_DIB: u32 = 8;
+const MAX_CLIPBOARD_IMAGE_RGBA_BYTES: usize = 25 * 1024 * 1024;
 
 /// Payload emitted to the frontend on every clipboard change.
 #[derive(Clone, Serialize)]
@@ -69,6 +70,7 @@ impl From<HWND> for SendHwnd {
 struct WatcherState {
     app: AppHandle,
     active: Arc<AtomicBool>,
+    pending: Arc<AtomicBool>,
 }
 
 /// Start watching the system clipboard.  Returns a guard that stops the watcher
@@ -84,16 +86,19 @@ pub fn start(window: &WebviewWindow) -> Result<ClipboardWatcherGuard, String> {
     }
 
     let active = Arc::new(AtomicBool::new(true));
+    let pending = Arc::new(AtomicBool::new(false));
     let state = Box::new(WatcherState {
         app: window.app_handle().clone(),
         active: active.clone(),
+        pending: pending.clone(),
     });
 
     let state_ptr = Box::into_raw(state) as usize;
 
     unsafe {
         AddClipboardFormatListener(hwnd).map_err(|e| e.to_string())?;
-        let ok: bool = SetWindowSubclass(hwnd, Some(clipboard_wndproc), SUBCLASS_ID, state_ptr).as_bool();
+        let ok: bool =
+            SetWindowSubclass(hwnd, Some(clipboard_wndproc), SUBCLASS_ID, state_ptr).as_bool();
         if !ok {
             // Subclass failed – free the box and deregister listener
             drop(Box::from_raw(state_ptr as *mut WatcherState));
@@ -105,6 +110,7 @@ pub fn start(window: &WebviewWindow) -> Result<ClipboardWatcherGuard, String> {
     Ok(ClipboardWatcherGuard {
         hwnd: SendHwnd::from(hwnd),
         active,
+        pending,
     })
 }
 
@@ -112,11 +118,13 @@ pub fn start(window: &WebviewWindow) -> Result<ClipboardWatcherGuard, String> {
 pub struct ClipboardWatcherGuard {
     hwnd: SendHwnd,
     active: Arc<AtomicBool>,
+    pending: Arc<AtomicBool>,
 }
 
 impl Drop for ClipboardWatcherGuard {
     fn drop(&mut self) {
         self.active.store(false, Ordering::SeqCst);
+        self.pending.store(false, Ordering::SeqCst);
         let hwnd = self.hwnd.hwnd();
         unsafe {
             let _ = RemoveClipboardFormatListener(hwnd);
@@ -138,10 +146,19 @@ unsafe extern "system" fn clipboard_wndproc(
 ) -> LRESULT {
     if message == WM_CLIPBOARDUPDATE && state_ptr != 0 {
         let state = &*(state_ptr as *const WatcherState);
-        if state.active.load(Ordering::SeqCst) {
-            if let Some(payload) = read_clipboard() {
-                let _ = state.app.emit("clipboard-changed", payload);
-            }
+        if state.active.load(Ordering::SeqCst) && !state.pending.swap(true, Ordering::SeqCst) {
+            let app = state.app.clone();
+            let active = state.active.clone();
+            let pending = state.pending.clone();
+            tauri::async_runtime::spawn_blocking(move || {
+                let payload = read_clipboard();
+                pending.store(false, Ordering::SeqCst);
+                if active.load(Ordering::SeqCst) {
+                    if let Some(payload) = payload {
+                        let _ = app.emit("clipboard-changed", payload);
+                    }
+                }
+            });
         }
     }
 
@@ -281,6 +298,9 @@ fn dib_to_png_base64(dib: &[u8]) -> Option<String> {
     let bottom_up = height_raw > 0;
     let w = width as usize;
     let h = height as usize;
+    if w.checked_mul(h)?.checked_mul(4)? > MAX_CLIPBOARD_IMAGE_RGBA_BYTES {
+        return None;
+    }
     let pixels = &dib[pixel_offset..];
 
     let mut rgba = vec![0u8; w * h * 4];
@@ -380,7 +400,11 @@ fn crc32(tag: &[u8; 4], data: &[u8]) -> u32 {
         for (n, entry) in t.iter_mut().enumerate() {
             let mut c = n as u32;
             for _ in 0..8 {
-                c = if c & 1 != 0 { 0xEDB88320 ^ (c >> 1) } else { c >> 1 };
+                c = if c & 1 != 0 {
+                    0xEDB88320 ^ (c >> 1)
+                } else {
+                    c >> 1
+                };
             }
             *entry = c;
         }
