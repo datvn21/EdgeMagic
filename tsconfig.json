@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/types" },
+    { "path": "./packages/module-api" },
+    { "path": "./packages/core" },
+    { "path": "./packages/sync-google-drive" },
+    { "path": "./modules/clipboard" },
+    { "path": "./apps/desktop" }
+  ]
+}

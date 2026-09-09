@@ -1,0 +1,75 @@
+.icon-button, .compact-widget-button, .record-actions button, .quick-buttons button, .ownership-actions button, .clear-inbox-button, .peek-reset {
+  min-width: 32px; min-height: 32px; padding: var(--space-2); border: 1px solid transparent; border-radius: var(--control-radius); background: transparent; color: var(--text-muted); box-shadow: none;
+}
+.icon-button:hover, .compact-widget-button:hover, .record-actions button:hover, .ownership-actions button:hover { color: var(--text); background: var(--hover); border-color: var(--border); }
+.icon-button:focus-visible, .compact-widget-button:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 4px var(--focus-ring); }
+button:active { background: var(--active); }
+button, input, textarea, select { transition: background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out); }
+button { min-height: 36px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--control-radius); background: var(--surface); color: var(--text); font-size: 13px; font-weight: 500; line-height: 1; }
+button:enabled { cursor: pointer; }
+.ui-button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); white-space: nowrap; box-shadow: none; }
+.ui-button-sm { min-height: 32px; padding-inline: 10px; font-size: 12px; border-radius: 9px; }
+.ui-button-md { min-height: 38px; }
+.ui-button-primary { border-color: transparent; background: var(--text); color: var(--surface); }
+.ui-button-secondary { background: var(--surface-elevated); border-color: var(--border); color: var(--text); }
+.ui-button-ghost { border-color: transparent; background: transparent; color: var(--text-muted); }
+.ui-button-danger { border-color: var(--border); color: var(--danger); background: var(--surface-elevated); }
+.ui-button:disabled { background: var(--surface-elevated); border-color: var(--border); color: var(--text-muted); }
+.ui-button:hover { background: var(--hover); border-color: var(--border-strong); }
+.ui-button-primary:hover { background: color-mix(in srgb, var(--text) 88%, var(--surface)); }
+.ui-button-ghost:hover { background: var(--hover); }
+.ui-button-danger:hover { border-color: color-mix(in srgb, var(--danger) 42%, var(--border)); background: color-mix(in srgb, var(--danger) 9%, var(--surface-elevated)); color: var(--danger); }
+.ui-heading { display: grid; gap: 3px; min-width: 0; }
+.ui-heading h1, .ui-heading h2, .ui-heading h3 { overflow-wrap: anywhere; font-family: var(--font-display); letter-spacing: -.02em; }
+.ui-heading-1 h1 { font-size: 18px; font-weight: 650; line-height: 1.15; }
+.ui-heading-2 h2 { font-size: 15px; font-weight: 620; }
+.ui-heading-3 h3 { font-size: 13px; font-weight: 600; }
+.ui-eyebrow { color: var(--text-muted); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
+.ui-checkbox { display: inline-flex; align-items: center; gap: 10px; min-height: 34px; cursor: pointer; color: var(--text); }
+.ui-checkbox input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+.ui-checkbox-track { display: inline-flex; align-items: center; width: 48px; height: 28px; padding: 3px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-raised); transition: background var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out); }
+.ui-checkbox-thumb { width: 20px; height: 20px; border-radius: 50%; background: var(--text-muted); box-shadow: 0 2px 5px rgba(0,0,0,.24); transition: transform var(--duration-normal) var(--ease-out), background var(--duration-normal) var(--ease-out); }
+.ui-checkbox input:checked + .ui-checkbox-track { border-color: transparent; background: var(--text); }
+.ui-checkbox input:checked + .ui-checkbox-track .ui-checkbox-thumb { transform: translateX(20px); background: var(--surface); }
+.ui-checkbox input:focus-visible + .ui-checkbox-track { outline: 2px solid var(--focus); outline-offset: 3px; }
+.ui-checkbox-label { font-size: 13px; }
+.widget-header { border-bottom: 0; background: linear-gradient(180deg, color-mix(in srgb, var(--surface-raised) 52%, transparent), transparent); }
+.widget-shell-heading h1 { letter-spacing: -.035em; }
+.record-actions button, .item-actions button { border-color: transparent; background: transparent; }
+.record-actions button:hover, .item-actions button:hover { background: var(--hover); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.quick-form > button { justify-self: start; width: auto; }
+.compact-widget-row { display: flex; flex: 0 0 auto; flex-wrap: wrap; align-items: center; gap: var(--space-2); overflow: hidden; padding-top: var(--space-3); }
+.compact-widget-button[aria-pressed="true"] { color: var(--text); background: var(--active); border-color: var(--border-strong); }
+.quick-form { display: grid; gap: var(--space-2); }
+.quick-form.inline { grid-template-columns: minmax(0, 1fr) auto; }
+input, textarea, select { width: 100%; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface-raised); padding: var(--space-2) var(--space-3); }
+textarea { min-height: 88px; resize: vertical; }
+.checkbox-row { display: flex; align-items: center; gap: var(--space-2); }
+.checkbox-row input { width: auto; }
+.empty-state, .inbox-empty, .settings-help { color: var(--text-muted); }
+.backup-status { color: var(--success); }
+.backup-status.error { color: var(--danger); }
+.drag-ghost {
+  position: fixed;
+  inset: -10000px auto auto -10000px;
+  z-index: 2147483647;
+  max-width: 320px;
+  overflow: hidden;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: 500 13px system-ui, sans-serif;
+  pointer-events: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drag-ghost-image {
+  display: block;
+  max-width: 180px;
+  max-height: 120px;
+  border-radius: var(--radius-sm);
+  object-fit: contain;
+}

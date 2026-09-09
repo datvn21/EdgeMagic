@@ -1,0 +1,71 @@
+﻿# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build outputs ────────────────────────────────────────────────────────────
+dist/
+dist-web/
+packages/*/dist/
+apps/*/dist/
+apps/*/dist-web/
+
+# ─── TypeScript ───────────────────────────────────────────────────────────────
+*.tsbuildinfo
+
+# ─── Rust / Tauri ─────────────────────────────────────────────────────────────
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/android/
+apps/desktop/src-tauri/gen/apple/
+
+# ─── SQLite databases ─────────────────────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+
+# ─── Environment ──────────────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── OS artifacts ─────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── AI / editor tool folders ────────────────────────────────────────────────
+.hallmark/
+**/.agents/
+**/.codex/
+**/.cursor/
+**/.claude/
+**/.gemini/
+**/.windsurf/
+**/.ai/
+**/brain/
+AGENTS.md
+task.md
+implementation_plan.md
+walkthrough.md
+session_analysis_report.md
+prompt_improvement_tips.md
+*.resolved.*
+*.ai.md
+*.agent.md
+.idea/
+.vscode/
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ─── Test / coverage artifacts ────────────────────────────────────────────────
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+*.lcov
+
+# ─── Local release artifacts ──────────────────────────────────────────────────
+*.msi
+*.msix
+*.appinstaller
+*.sig

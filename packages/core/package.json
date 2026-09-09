@@ -1,0 +1,35 @@
+{
+  "name": "@edgemagic/core",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./registries/command-registry": {
+      "types": "./dist/registries/command-registry.d.ts",
+      "default": "./dist/registries/command-registry.js"
+    },
+    "./registries/action-registry": {
+      "types": "./dist/registries/action-registry.d.ts",
+      "default": "./dist/registries/action-registry.js"
+    },
+    "./event-bus/runtime-event-bus": {
+      "types": "./dist/event-bus/runtime-event-bus.d.ts",
+      "default": "./dist/event-bus/runtime-event-bus.js"
+    },
+    "./plugins/plugin-runtime": {
+      "types": "./dist/plugins/plugin-runtime.d.ts",
+      "default": "./dist/plugins/plugin-runtime.js"
+    }
+  },
+  "dependencies": {
+    "@edgemagic/module-api": "0.1.0",
+    "@edgemagic/types": "0.1.0"
+  }
+}

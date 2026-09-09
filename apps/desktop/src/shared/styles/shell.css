@@ -1,0 +1,18 @@
+.app-shell { position: relative; width: 100%; height: 100%; color: var(--text); background: transparent; border: 0; outline: 0; }
+.edge-handle { position: absolute; top: 0; bottom: 0; z-index: 4; width: 28px; padding: 0; background: transparent; border: 0; outline: 0; box-shadow: none; }
+.edge-left .edge-handle { left: 0; }
+.edge-right .edge-handle { right: 0; }
+.edgebar { position: absolute; top: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; border: 0; outline: 0; box-shadow: none; }
+.edge-left .edgebar { left: 0; border-radius: var(--radius-window); --edge-shelf-offset: -14px; }
+.edge-right .edgebar { right: 0; border-radius: var(--radius-window); --edge-shelf-offset: 14px; }
+.module-panel { display: flex; flex-direction: column; min-height: 0; max-height: 100vh; padding: var(--space-4); border: 0; outline: 0; background: transparent; }
+.widget-canvas { height: 100vh; padding-top: 0; }
+.focus-header { justify-content: flex-start; }
+.focus-content { min-height: 0; flex: 1; overflow: auto; }
+@media (prefers-reduced-motion: no-preference) {
+  .edgebar { animation: edge-shelf-in var(--duration-normal) var(--ease-out) both; }
+  .edgebar.is-closing { animation: edge-shelf-out var(--duration-normal) ease-in both; }
+  @keyframes edge-shelf-in { from { opacity: 0; transform: translateX(var(--edge-shelf-offset)); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes edge-shelf-out { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(var(--edge-shelf-offset)); } }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 1ms; transition-duration: 1ms; } }

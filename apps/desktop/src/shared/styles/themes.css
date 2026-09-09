@@ -1,0 +1,31 @@
+.theme-dark {
+  color-scheme: dark;
+  --surface: var(--black-raised);
+  --surface-raised: #1c1c1c;
+  --surface-elevated: #232323;
+  --item-surface: #242424;
+  --item-hover: #303030;
+  --text: var(--white);
+  --text-muted: var(--gray-dark);
+  --border: var(--border-dark);
+  --border-strong: rgba(255,255,255,.22);
+  /* Keep interaction feedback one step above the dark surface, never white. */
+  --hover: #2a2a2a;
+  --active: #333333;
+  --focus-ring: rgba(138,180,248,.38);
+}
+.theme-light {
+  color-scheme: light;
+  --surface: var(--white-raised);
+  --surface-raised: #f2f2f2;
+  --surface-elevated: #ffffff;
+  --item-surface: #ffffff;
+  --item-hover: #e5e5e5;
+  --text: var(--black);
+  --text-muted: var(--gray-light);
+  --border: var(--border-light);
+  --border-strong: rgba(0,0,0,.22);
+  --hover: rgba(0, 0, 0, .06);
+  --active: rgba(0,0,0,.11);
+  --focus-ring: rgba(37,99,235,.22);
+}

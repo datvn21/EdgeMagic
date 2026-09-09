@@ -1,0 +1,121 @@
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.density-compact {
+  --space-2: 6px;
+  --space-3: 8px;
+  --space-4: 10px;
+  --space-5: 12px;
+  --control-height: 34px;
+  --density-row-min-height: 42px;
+  --density-section-padding: 12px;
+  --density-title-size: 13px;
+  --density-body-size: 12px;
+  --density-widget-heading-size: 16px;
+}
+.density-comfortable {
+  --density-row-min-height: 48px;
+  --density-section-padding: 16px;
+  --density-title-size: 14px;
+  --density-body-size: 12px;
+  --density-widget-heading-size: 18px;
+}
+.density-spacious {
+  --space-2: 10px;
+  --space-3: 14px;
+  --space-4: 18px;
+  --space-5: 22px;
+  --control-height: 44px;
+  --density-row-min-height: 56px;
+  --density-section-padding: 20px;
+  --density-title-size: 15px;
+  --density-body-size: 13px;
+  --density-widget-heading-size: 19px;
+}
+.density-compact .module-panel {
+  padding: var(--space-3);
+}
+.density-comfortable .module-panel,
+.density-spacious .module-panel {
+  padding: var(--space-4);
+}
+.density-compact .widget-header {
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+.density-spacious .widget-header {
+  padding: var(--space-4) var(--space-5) var(--space-3);
+}
+.density-compact .widget-shell-body {
+  padding: 0 var(--space-3) var(--space-3);
+}
+.density-spacious .widget-shell-body {
+  padding: 0 var(--space-5) var(--space-5);
+}
+.density-compact .settings-section,
+.density-comfortable .settings-section,
+.density-spacious .settings-section {
+  padding: var(--density-section-padding);
+}
+.density-compact .widget-shell-heading h1,
+.density-comfortable .widget-shell-heading h1,
+.density-spacious .widget-shell-heading h1 {
+  font-size: var(--density-widget-heading-size);
+}
+.density-compact .record-row,
+.density-compact .queue-row,
+.density-compact .todo-row,
+.density-compact .inbox-item,
+.density-comfortable .record-row,
+.density-comfortable .queue-row,
+.density-comfortable .todo-row,
+.density-comfortable .inbox-item,
+.density-spacious .record-row,
+.density-spacious .queue-row,
+.density-spacious .todo-row,
+.density-spacious .inbox-item {
+  min-height: var(--density-row-min-height);
+}
+.density-compact .record-row h3,
+.density-compact .todo-row span,
+.density-compact .inbox-item h3,
+.density-comfortable .record-row h3,
+.density-comfortable .todo-row span,
+.density-comfortable .inbox-item h3,
+.density-spacious .record-row h3,
+.density-spacious .todo-row span,
+.density-spacious .inbox-item h3 {
+  font-size: var(--density-title-size);
+}
+.density-compact .record-row p,
+.density-compact .queue-row small,
+.density-compact .inbox-item p,
+.density-comfortable .record-row p,
+.density-comfortable .queue-row small,
+.density-comfortable .inbox-item p,
+.density-spacious .record-row p,
+.density-spacious .queue-row small,
+.density-spacious .inbox-item p {
+  font-size: var(--density-body-size);
+}
+.density-compact .trash-item,
+.density-comfortable .trash-item,
+.density-spacious .trash-item {
+  min-height: calc(var(--density-row-min-height) + 14px);
+}
+.density-compact .trash-title,
+.density-comfortable .trash-title,
+.density-spacious .trash-title {
+  font-size: var(--density-title-size);
+}
+@media (max-width: 420px), (max-height: 720px) {
+  .density-spacious {
+    --space-2: 6px;
+    --space-3: 8px;
+    --space-4: 10px;
+    --space-5: 12px;
+    --control-height: 34px;
+    --density-row-min-height: 42px;
+    --density-section-padding: 12px;
+    --density-title-size: 13px;
+    --density-body-size: 12px;
+    --density-widget-heading-size: 16px;
+  }
+}
