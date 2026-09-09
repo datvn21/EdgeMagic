@@ -146,6 +146,11 @@ function EdgeBarApp() {
     if (!hydrated || !settings.clipboardCaptureEnabled) return;
 
     return platform.clipboard.onChange((payload) => {
+      if (payload.kind === "image" && payload.tempPath.startsWith("data:") && dataUrlByteSize(payload.tempPath) > maxDroppedFileBytes) {
+        showTemporaryFeedback("Clipboard image is over 10MB");
+        return;
+      }
+
       const records = normalizeClipboardPayload(payload)
         .map((capture) => captureInboxRef.current.capture(capture))
         .filter((record): record is CapturedRecord => record !== null);
