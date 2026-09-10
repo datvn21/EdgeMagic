@@ -40,12 +40,14 @@ export const defaultEdgeSettings: EdgeSettings = {
   peekWidgetIds: ["clipboard", "notes"]
 };
 const validModuleIds = new Set(["clipboard", "notes", "todo", "reminder", "library", "settings"]);
+const validPeekModuleIds = new Set(["clipboard", "notes", "todo", "reminder", "library"]);
 
 export function normalizeEdgeSettings(parsed: Partial<EdgeSettings> | Record<string, unknown>): EdgeSettings {
   const input = parsed as Partial<EdgeSettings> & Record<string, unknown>;
   const settingsVersion = input.settingsVersion === 2 ? 2 : 1;
   const clipboardRetentionDays = settingsVersion === 1 && input.clipboardRetentionDays === 30 ? 7 : input.clipboardRetentionDays;
   const visibleModules = normalizeVisibleModules(input.visibleModules);
+  const peekWidgetIds = normalizePeekWidgetIds(input.peekWidgetIds, visibleModules);
   return {
     ...defaultEdgeSettings,
     ...input,
@@ -58,7 +60,7 @@ export function normalizeEdgeSettings(parsed: Partial<EdgeSettings> | Record<str
     enabledPlugins: Array.isArray(input.enabledPlugins) ? input.enabledPlugins.map(String) : defaultEdgeSettings.enabledPlugins,
     pluginPermissionGrants: isPluginGrantRecord(input.pluginPermissionGrants) ? input.pluginPermissionGrants : defaultEdgeSettings.pluginPermissionGrants,
     visibleModules,
-    peekWidgetIds: visibleModules.slice(0, 2)
+    peekWidgetIds
   };
 }
 
@@ -67,6 +69,17 @@ function normalizeVisibleModules(value: unknown): string[] {
   const mapped = value.map(String).map((id) => id === "saved" || id === "bookmarks" ? "library" : id);
   const visibleModules = [...new Set(mapped)].filter((id) => validModuleIds.has(id));
   return visibleModules.includes("settings") ? visibleModules : [...visibleModules, "settings"];
+}
+
+function normalizePeekWidgetIds(value: unknown, visibleModules: string[]): string[] {
+  const fallback = visibleModules.filter((id) => validPeekModuleIds.has(id)).slice(0, 2);
+  if (!Array.isArray(value)) return fallback;
+
+  const mapped = value.map(String).map((id) => id === "saved" || id === "bookmarks" ? "library" : id);
+  const peekWidgetIds = [...new Set(mapped)]
+    .filter((id) => validPeekModuleIds.has(id) && visibleModules.includes(id))
+    .slice(0, 2);
+  return peekWidgetIds.length > 0 ? peekWidgetIds : fallback;
 }
 
 function normalizeTheme(value: unknown): EdgeTheme {

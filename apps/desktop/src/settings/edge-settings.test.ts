@@ -11,13 +11,21 @@ describe("normalizeEdgeSettings", () => {
     expect(normalizeEdgeSettings({ theme: "system" }).theme).toBe("light");
   });
 
-  it("derives the full shelf widgets from the first two enabled modules", () => {
+  it("preserves explicit full shelf widgets independently of enabled module order", () => {
     const settings = normalizeEdgeSettings({
       visibleModules: ["todo", "reminder", "clipboard", "settings", "unknown", "saved", "bookmarks"],
       peekWidgetIds: ["clipboard", "notes"]
     });
 
     expect(settings.visibleModules).toEqual(["todo", "reminder", "clipboard", "settings", "library"]);
+    expect(settings.peekWidgetIds).toEqual(["clipboard"]);
+  });
+
+  it("derives legacy full shelf widgets when none are saved", () => {
+    const settings = normalizeEdgeSettings({
+      visibleModules: ["todo", "reminder", "clipboard", "settings"]
+    });
+
     expect(settings.peekWidgetIds).toEqual(["todo", "reminder"]);
   });
 

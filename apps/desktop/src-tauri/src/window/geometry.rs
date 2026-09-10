@@ -3,7 +3,8 @@ use serde::Serialize;
 pub const CANVAS_WIDTH_LOGICAL: f64 = 380.0;
 pub const SURFACE_HEIGHT_LOGICAL: f64 = 820.0;
 pub const SURFACE_MARGIN_LOGICAL: f64 = 12.0;
-pub const COLLAPSED_THICKNESS_LOGICAL: f64 = 28.0;
+pub const COLLAPSED_THICKNESS_LOGICAL: f64 = 14.0;
+pub const COLLAPSED_HEIGHT_LOGICAL: f64 = 72.0;
 pub const SURFACE_CORNER_DIAMETER_LOGICAL: f64 = 40.0;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, serde::Deserialize)]
@@ -30,6 +31,7 @@ pub struct EdgeGeometry {
     pub surface_top: i32,
     pub surface_height: u32,
     pub collapsed_thickness: u32,
+    pub collapsed_height: u32,
     pub corner_diameter: u32,
 }
 
@@ -54,6 +56,7 @@ pub fn calculate(work: WorkArea, scale_factor: f64, position: EdgePosition) -> E
         surface_top,
         surface_height,
         collapsed_thickness: physical(COLLAPSED_THICKNESS_LOGICAL).min(width),
+        collapsed_height: physical(COLLAPSED_HEIGHT_LOGICAL).min(surface_height),
         corner_diameter: physical(SURFACE_CORNER_DIAMETER_LOGICAL),
     }
 }
@@ -68,11 +71,16 @@ pub fn bounds_for_mode(canvas: EdgeGeometry, mode: &str, position: EdgePosition)
         };
         return EdgeGeometry {
             x,
-            y: canvas.y + canvas.surface_top,
+            y: canvas.y
+                + canvas.surface_top
+                + ((canvas
+                    .surface_height
+                    .saturating_sub(canvas.collapsed_height))
+                    / 2) as i32,
             width: canvas.collapsed_thickness,
-            height: canvas.surface_height,
+            height: canvas.collapsed_height,
             surface_top: 0,
-            surface_height: canvas.surface_height,
+            surface_height: canvas.collapsed_height,
             ..canvas
         };
     }
@@ -118,7 +126,8 @@ mod tests {
         );
         assert_eq!(result.width, 570);
         assert_eq!(result.surface_height, 664);
-        assert_eq!(result.collapsed_thickness, 42);
+        assert_eq!(result.collapsed_thickness, 21);
+        assert_eq!(result.collapsed_height, 108);
     }
 
     #[test]
@@ -138,6 +147,10 @@ mod tests {
             assert_eq!(
                 result.collapsed_thickness,
                 (COLLAPSED_THICKNESS_LOGICAL * scale).round() as u32
+            );
+            assert_eq!(
+                result.collapsed_height,
+                (COLLAPSED_HEIGHT_LOGICAL * scale).round() as u32
             );
             assert_eq!(
                 result.corner_diameter,
@@ -163,7 +176,7 @@ mod tests {
         let collapsed = bounds_for_mode(canvas, "collapsed", EdgePosition::Right);
         assert_eq!(
             (collapsed.x, collapsed.y, collapsed.width, collapsed.height),
-            (1892, 166, 28, 820)
+            (1906, 540, 14, 72)
         );
         let shelf = bounds_for_mode(canvas, "shelf", EdgePosition::Right);
         assert_eq!(

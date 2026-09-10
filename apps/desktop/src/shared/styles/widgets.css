@@ -73,9 +73,11 @@
 }
 .settings-stack {
   gap: var(--space-3);
+  align-content: start;
 }
 .settings-section {
   min-width: 0;
+  max-width: 100%;
   padding: var(--space-4);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -559,7 +561,7 @@
 }
 .peek-setting-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   min-width: 0;
   align-items: center;
   gap: var(--space-2);
@@ -587,6 +589,33 @@
 }
 .peek-choice:has(input:disabled) {
   opacity: 0.45;
+}
+.peek-mode-button {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+.peek-mode-button:hover {
+  color: var(--text);
+  background: var(--hover);
+  border-color: var(--border);
+}
+.peek-mode-button[aria-pressed="true"] {
+  color: var(--text);
+  background: var(--active);
+  border-color: var(--border-strong);
+}
+.peek-mode-button:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 .peek-order-actions {
   display: inline-flex;
@@ -1012,12 +1041,17 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  flex: 1;
+  max-width: 100%;
+  max-height: 100%;
+  flex: 1 1 auto;
   margin: 0;
   box-shadow: none;
 }
 .focus-view .widget-shell-body {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
 }
 .widget-card-surface .widget-shell-body {
   padding-bottom: var(--space-3);
