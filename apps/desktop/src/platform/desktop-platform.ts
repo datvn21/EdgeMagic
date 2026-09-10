@@ -1,6 +1,7 @@
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { disable as disableAutostart, enable as enableAutostart, isEnabled as isAutostartEnabled } from "@tauri-apps/plugin-autostart";
 import { listen as listenToTauriEvent } from "@tauri-apps/api/event";
+import { getCurrentWebview, type DragDropEvent } from "@tauri-apps/api/webview";
 import { availableMonitors, primaryMonitor } from "@tauri-apps/api/window";
 import { register as registerGlobalShortcut, unregister as unregisterGlobalShortcut } from "@tauri-apps/plugin-global-shortcut";
 import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
@@ -10,6 +11,7 @@ import type {
   ApplyEdgeWindowRequest,
   DeepLinkPayload,
   EdgeWindowIntent,
+  FileDropEvent,
   PlatformService,
   Unregister
 } from "@edgemagic/module-api";
@@ -92,7 +94,8 @@ export function createDesktopPlatform(options: DesktopPlatformOptions = {}): Pla
               invokeCommand<void>("delete_dropped_file", { path })
           }
         : {}),
-      onDrop: (handler) => subscribeNativeFileDrop(handler, isTauriRuntime)
+      onDrop: (handler) => subscribeNativeFileDrop(handler, isTauriRuntime),
+      onDropEvent: (handler) => subscribeNativeFileDropEvent(handler, isTauriRuntime)
     },
     monitors: {
       list: () => listNativeMonitors(isTauriRuntime)
@@ -222,11 +225,23 @@ async function listNativeMonitors(isTauriRuntime: () => boolean) {
 }
 
 function subscribeNativeFileDrop(handler: (paths: string[]) => void, isTauriRuntime: () => boolean): Unregister {
+  return subscribeNativeFileDropEvent((event) => {
+    if (event.type === "drop") handler(event.paths);
+  }, isTauriRuntime);
+}
+
+function subscribeNativeFileDropEvent(handler: (event: FileDropEvent) => void, isTauriRuntime: () => boolean): Unregister {
   if (!isTauriRuntime()) return () => {};
   let active = true;
   let unlisten: (() => void) | undefined;
-  void listenToTauriEvent<{ paths?: string[] }>("tauri://drag-drop", (event) => {
-    if (active && Array.isArray(event.payload?.paths)) handler(event.payload.paths);
+  void getCurrentWebview().onDragDropEvent((event: { payload: DragDropEvent }) => {
+    if (!active) return;
+    const payload = event.payload;
+    if (payload.type === "enter" || payload.type === "drop") {
+      handler({ type: payload.type, paths: payload.paths });
+      return;
+    }
+    handler({ type: payload.type });
   }).then((remove) => {
     if (active) unlisten = remove;
     else remove();

@@ -139,7 +139,14 @@ export interface FilePlatform {
   persistDroppedFile?(filename: string, bytes: Uint8Array): Promise<string>;
   deleteDroppedFile?(path: string): Promise<void>;
   onDrop(handler: (paths: string[]) => void): Unregister;
+  onDropEvent?(handler: (event: FileDropEvent) => void): Unregister;
 }
+
+export type FileDropEvent =
+  | { type: "enter"; paths: string[] }
+  | { type: "over" }
+  | { type: "drop"; paths: string[] }
+  | { type: "leave" };
 
 export interface MonitorInfo {
   id: string;

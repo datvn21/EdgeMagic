@@ -26,6 +26,7 @@ export const initialShellState: ShellState = {
 export function shellReducer(state: ShellState, action: ShellAction): ShellState {
   switch (action.type) {
     case "show-shelf":
+      if (state.mode === "shelf" && state.focusedWidgetId === null) return state;
       return { ...state, mode: "shelf", focusedWidgetId: null };
     case "focus-widget":
       return { ...state, mode: "focus", focusedWidgetId: action.widgetId };
@@ -36,6 +37,7 @@ export function shellReducer(state: ShellState, action: ShellAction): ShellState
     case "toggle-pin":
       return { ...state, pinned: !state.pinned };
     case "set-drag-active":
+      if (state.dragActive === action.active) return state;
       return { ...state, dragActive: action.active };
   }
 }

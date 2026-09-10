@@ -1,6 +1,6 @@
 [package]
 name = "edgemagic"
-version = "0.1.0"
+version = "0.1.2"
 description = "EdgeMagic desktop shell"
 authors = ["EdgeMagic"]
 edition = "2021"

@@ -20,7 +20,7 @@ export function WidgetCard({ module, active, onDragOver, onDrop, dropState = "id
       onDragOver={onDragOver}
       onDrop={onDrop}
     >
-      {dropState === "eligible" || dropState === "over" ? <span className="widget-drop-hint" aria-hidden="true">Drop into {module.label}</span> : null}
+      {dropState === "over" ? <span className="widget-drop-hint" aria-hidden="true">Drop into {module.label}</span> : null}
       <WidgetShell title={module.label} className="widget-card-surface" testId={`${module.id}-widget-body`}>
         {active ? children : null}
       </WidgetShell>

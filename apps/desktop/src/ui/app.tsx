@@ -2,6 +2,7 @@ import type { DeepLinkPayload } from "@edgemagic/module-api";
 import { normalizeClipboardPayload } from "@edgemagic/clipboard-module";
 import type { ClipboardEvent, DragEvent } from "react";
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { Pin, PinOff } from "lucide-react";
 import type { CapturedRecord } from "../capture/use-capture-inbox.js";
 import { useCaptureInbox } from "../capture/use-capture-inbox.js";
@@ -24,6 +25,7 @@ import { FocusView } from "../features/edge-shell/ui/focus-view.js";
 
 const shelfExitFallbackMs = 200;
 const maxDroppedFileBytes = 10 * 1024 * 1024;
+const dragIdleClearMs = 120;
 
 export function App() {
   return <EdgeBarApp />;
@@ -43,6 +45,7 @@ function EdgeBarApp() {
   const [closing, setClosing] = useState(false);
   const hideTimer = useRef<number | null>(null);
   const collapseTimer = useRef<number | null>(null);
+  const dragIdleTimer = useRef<number | null>(null);
   const inboxItemDragReleaseTimer = useRef<number | null>(null);
   const closingRef = useRef(false);
   const shellStateRef = useRef(shell);
@@ -164,6 +167,7 @@ function EdgeBarApp() {
   useEffect(() => {
     return platform.files.onDrop((paths) => {
       clearHideTimer();
+      clearDragStateSync();
       dispatch({ type: "show-shelf" });
       const destination = resolveCaptureDestination(activeModuleRef.current);
       void Promise.all(readNativeFileInputs(paths).map(async (input) => {
@@ -174,8 +178,27 @@ function EdgeBarApp() {
         return captureInboxRef.current.captureFilePath(input.path!);
       })).then((records) => {
         commitCaptured(records.filter((record): record is CapturedRecord => record !== null), destination);
+      }).catch((error: unknown) => {
+        console.error("Failed to capture dropped files:", error);
+      }).finally(() => {
         releaseDragSurface();
       });
+    });
+  }, [platform]);
+
+  useEffect(() => {
+    if (!platform.files.onDropEvent) return;
+    return platform.files.onDropEvent((event) => {
+      if (event.type === "enter" || event.type === "over") {
+        keepShelfOpen();
+        if (shellStateRef.current.mode !== "shelf" || shellStateRef.current.focusedWidgetId !== null) {
+          dispatch({ type: "show-shelf" });
+        }
+        if (!shellStateRef.current.dragActive) dispatch({ type: "set-drag-active", active: true });
+        scheduleDragIdleClear();
+        return;
+      }
+      clearDragStateSync();
     });
   }, [platform]);
 
@@ -201,6 +224,7 @@ function EdgeBarApp() {
     return () => {
       window.removeEventListener("dragend", resetDrag);
       window.removeEventListener("drop", resetDrag);
+      clearDragIdleTimer();
     };
   }, []);
 
@@ -293,7 +317,12 @@ function EdgeBarApp() {
 
   function clearDragState(): void {
     dragDepth.current = 0;
+    clearDragIdleTimer();
     dispatch({ type: "set-drag-active", active: false });
+  }
+
+  function clearDragStateSync(): void {
+    flushSync(clearDragState);
   }
 
   function releaseDragSurface(): void {
@@ -344,6 +373,21 @@ function EdgeBarApp() {
     if (collapseTimer.current !== null) {
       window.clearTimeout(collapseTimer.current);
       collapseTimer.current = null;
+    }
+  }
+
+  function scheduleDragIdleClear() {
+    clearDragIdleTimer();
+    dragIdleTimer.current = window.setTimeout(() => {
+      dragIdleTimer.current = null;
+      clearDragState();
+    }, dragIdleClearMs);
+  }
+
+  function clearDragIdleTimer() {
+    if (dragIdleTimer.current !== null) {
+      window.clearTimeout(dragIdleTimer.current);
+      dragIdleTimer.current = null;
     }
   }
 
@@ -406,6 +450,7 @@ function EdgeBarApp() {
     event.preventDefault();
     event.stopPropagation();
     keepShelfOpen();
+    scheduleDragIdleClear();
     setActiveModuleId(targetModuleId);
     dispatch({ type: "set-drag-active", active: true });
   }
@@ -416,6 +461,7 @@ function EdgeBarApp() {
     event.stopPropagation();
     dragDepth.current += 1;
     keepShelfOpen();
+    scheduleDragIdleClear();
     setActiveModuleId(targetModuleId);
     if (shellStateRef.current.mode === "collapsed") dispatch({ type: "show-shelf" });
     dispatch({ type: "set-drag-active", active: true });
@@ -433,6 +479,7 @@ function EdgeBarApp() {
     event.stopPropagation();
     dragDepth.current = 0;
     keepShelfOpen();
+    clearDragStateSync();
     const internal = parseItemTransfer(event.dataTransfer.getData(ITEM_TRANSFER_MIME));
     if (internal) {
       const record = captureInboxRef.current.records.find((candidate) => candidate.item.id === internal.itemId);
@@ -448,8 +495,13 @@ function EdgeBarApp() {
       releaseDragSurface();
       return;
     }
-    const capturedRecords = (await Promise.all(readDropInputs(event.dataTransfer)
-      .map(async (input) => {
+    // Snapshot DataTransfer while it is still readable, then yield so the
+    // cleared drop prompt can be painted before expensive capture work starts.
+    const dropInputs = readDropInputs(event.dataTransfer);
+    try {
+      await yieldToBrowserPaint();
+      const capturedRecords = (await Promise.all(
+        dropInputs.map(async (input) => {
         if (input.kind === "file") {
           if (input.file && input.file.size > maxDroppedFileBytes) {
             showTemporaryFeedback(`${input.name} is over 10MB`);
@@ -498,10 +550,17 @@ function EdgeBarApp() {
           }
         }
         return input.kind === "url" ? captureInbox.captureUrl(input.value) : captureInbox.captureText(input.value);
-      })))
-      .filter((record): record is CapturedRecord => record !== null);
-    commitCaptured(capturedRecords, resolveCaptureDestination(targetModuleId));
-    releaseDragSurface();
+        })
+      ))
+        .filter((record): record is CapturedRecord => record !== null);
+      commitCaptured(capturedRecords, resolveCaptureDestination(targetModuleId));
+    } finally {
+      releaseDragSurface();
+    }
+  }
+
+  function yieldToBrowserPaint(): Promise<void> {
+    return new Promise((resolve) => window.setTimeout(resolve, 0));
   }
 
   async function isDroppedFileTooLarge(path: string): Promise<boolean> {

@@ -53,6 +53,52 @@ describe("EdgeMagic hover widget launcher", () => {
     expect(screen.queryByText(/Th\u1ea3 \u0111\u1ec3 chuy\u1ec3n v\u00e0o/)).not.toBeInTheDocument();
   });
 
+  it("only shows the drop prompt on the hovered full widget", async () => {
+    window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
+      visibleModules: ["clipboard", "notes", "todo", "reminder", "library", "settings"],
+      peekWidgetIds: ["clipboard"]
+    }));
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Open EdgeMagic" })).toBeInTheDocument());
+
+    const main = screen.getByRole("main");
+    fireEvent.dragEnter(main);
+    const stack = await screen.findByTestId("expanded-widget-stack");
+    fireEvent.dragEnter(stack.querySelector("[data-widget='clipboard']")!);
+
+    expect(await screen.findByText("Drop into Clipboard")).toBeInTheDocument();
+    expect(screen.queryByText("Drop into Notes")).not.toBeInTheDocument();
+
+    fireEvent.dragOver(stack.querySelector("[data-widget='notes']")!);
+
+    expect(await screen.findByText("Drop into Notes")).toBeInTheDocument();
+    expect(screen.queryByText("Drop into Clipboard")).not.toBeInTheDocument();
+  });
+
+  it("clears the drop prompt immediately while a dropped payload is still processing", async () => {
+    window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
+      visibleModules: ["clipboard", "notes", "todo", "reminder", "library", "settings"],
+      peekWidgetIds: ["clipboard"]
+    }));
+    render(<App />);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Open EdgeMagic" })).toBeInTheDocument());
+
+    const main = screen.getByRole("main");
+    fireEvent.dragEnter(main);
+    expect(await screen.findByText("Drop into Clipboard")).toBeInTheDocument();
+
+    act(() => {
+      fireEvent.drop(main, {
+        dataTransfer: {
+          files: [],
+          getData: (type: string) => type === "text/uri-list" ? "https://example.com/photo.png" : ""
+        }
+      });
+    });
+
+    expect(screen.queryByText("Drop into Clipboard")).not.toBeInTheDocument();
+  });
+
   it("auto-hides the shelf after a drop finishes outside pointer hover", async () => {
     window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
       autoHideDelayMs: 0,
