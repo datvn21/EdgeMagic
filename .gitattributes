@@ -16,3 +16,4 @@
 *.eot binary
 *.db binary
 *.lock binary
+**/Cargo.lock -binary text eol=lf diff
