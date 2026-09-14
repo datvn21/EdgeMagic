@@ -27,6 +27,25 @@ describe("EdgeMagic hover widget launcher", () => {
     expect(screen.queryByRole("button", { name: "Open EdgeMagic" })).not.toBeInTheDocument();
   });
 
+  it("supports a single full shelf widget with the remaining modules as icons", async () => {
+    window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
+      visibleModules: ["clipboard", "notes", "todo", "reminder", "library", "settings"],
+      peekWidgetIds: ["clipboard"]
+    }));
+    render(<App />);
+    await act(async () => {});
+    await act(async () => { fireEvent.mouseEnter(screen.getByRole("button", { name: "Open EdgeMagic" })); });
+
+    expect(screen.getByTestId("expanded-widget-stack")).toHaveAttribute("data-card-count", "1");
+    expect(screen.getByRole("heading", { name: "Clipboard" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Notes" })).not.toBeInTheDocument();
+    expect(screen.getByTestId("compact-widget-row").querySelector("[data-widget='notes']")).toBeInTheDocument();
+
+    await act(async () => { screen.getByRole("button", { name: "Open Notes" }).click(); });
+    expect(screen.getByTestId("focus-widget-canvas")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Notes" })).toBeInTheDocument();
+  });
+
   it("only activates from the edge handle and removes that hit target while widgets are open", async () => {
     render(<App />);
     await act(async () => {});
@@ -42,7 +61,7 @@ describe("EdgeMagic hover widget launcher", () => {
   it("uses an English drag-and-drop prompt", async () => {
     window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
       visibleModules: ["clipboard", "notes", "todo", "reminder", "library", "settings"],
-      peekWidgetIds: ["clipboard"]
+      peekWidgetIds: ["clipboard", "notes"]
     }));
     render(<App />);
     await waitFor(() => expect(screen.getByRole("button", { name: "Open EdgeMagic" })).toBeInTheDocument());
@@ -56,7 +75,7 @@ describe("EdgeMagic hover widget launcher", () => {
   it("only shows the drop prompt on the hovered full widget", async () => {
     window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
       visibleModules: ["clipboard", "notes", "todo", "reminder", "library", "settings"],
-      peekWidgetIds: ["clipboard"]
+      peekWidgetIds: ["clipboard", "notes"]
     }));
     render(<App />);
     await waitFor(() => expect(screen.getByRole("button", { name: "Open EdgeMagic" })).toBeInTheDocument());
@@ -248,7 +267,7 @@ describe("EdgeMagic hover widget launcher", () => {
     expect(screen.queryByRole("button", { name: "Open Library" })).not.toBeInTheDocument();
   });
 
-  it("keeps Settings enabled when only one module is configured", async () => {
+  it("keeps Settings enabled as an icon when only one peek-capable module is configured", async () => {
     window.localStorage.setItem("edgemagic.edge-settings", JSON.stringify({
       visibleModules: ["clipboard"],
       peekWidgetIds: ["notes", "todo"]
@@ -258,10 +277,10 @@ describe("EdgeMagic hover widget launcher", () => {
     await act(async () => { fireEvent.mouseEnter(screen.getByRole("button", { name: "Open EdgeMagic" })); });
 
     const grid = screen.getByTestId("expanded-widget-stack");
-    expect(grid).toHaveAttribute("data-card-count", "2");
-    expect(grid.querySelectorAll(".widget-card")).toHaveLength(2);
+    expect(grid).toHaveAttribute("data-card-count", "1");
+    expect(grid.querySelectorAll(".widget-card")).toHaveLength(1);
     expect(grid.querySelector("[data-widget='clipboard']")).toBeInTheDocument();
-    expect(grid.querySelector("[data-widget='settings']")).toBeInTheDocument();
+    expect(screen.getByTestId("compact-widget-row").querySelector("[data-widget='settings']")).toBeInTheDocument();
   });
 
   it("clears every item shown in the Clipboard widget", async () => {

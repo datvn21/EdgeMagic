@@ -61,11 +61,12 @@ function EdgeBarApp() {
   const activeModuleRef = useRef(activeModuleId);
   const platformState = usePlatformState(platform, settings.startupAtLogin);
   const expanded = shell.mode !== "collapsed";
-  const desiredLayout = expanded ? "expanded" : "collapsed";
+  const nativeWindowMode = expanded ? "shelf" : "collapsed";
+  const desiredLayout = nativeWindowMode === "collapsed" ? "collapsed" : "expanded";
   const windowLayoutReady = appliedLayout === desiredLayout;
   const shelfModules = useMemo(() => getEnabledShelfModules(settings.visibleModules), [settings.visibleModules]);
-  const fullShelfModules = shelfModules.slice(0, 2);
-  const compactShelfModules = shelfModules.slice(2);
+  const fullShelfModules = useMemo(() => getFullShelfModules(shelfModules, settings.peekWidgetIds), [shelfModules, settings.peekWidgetIds]);
+  const compactShelfModules = useMemo(() => getCompactShelfModules(shelfModules, fullShelfModules), [shelfModules, fullShelfModules]);
   const activeShelfModuleId = shelfModules.some((module) => module.id === activeModuleId) ? activeModuleId : shelfModules[0]?.id ?? "clipboard";
   const focusedModuleEnabled = shelfModules.some((module) => module.id === shell.focusedWidgetId);
 
@@ -83,9 +84,9 @@ function EdgeBarApp() {
   useEffect(() => {
     if (!hydrated) return;
     let active = true;
-    const requestedLayout = shell.mode === "collapsed" ? "collapsed" : "expanded";
+    const requestedLayout = nativeWindowMode === "collapsed" ? "collapsed" : "expanded";
     void platform.window.apply({
-      mode: shell.mode,
+      mode: nativeWindowMode,
       position: settings.position,
       monitorId: settings.selectedMonitorId,
       appearance: settings.theme,
@@ -99,7 +100,7 @@ function EdgeBarApp() {
       if (active) setAppliedLayout(requestedLayout);
     });
     return () => { active = false; };
-  }, [hydrated, platform, settings.position, settings.selectedMonitorId, settings.theme, shell.mode, shell.pinned, updateSettings]);
+  }, [hydrated, platform, settings.position, settings.selectedMonitorId, settings.theme, nativeWindowMode, shell.pinned, updateSettings]);
 
   useEffect(() => platform.window.onIntent((intent) => {
     if (intent.type === "show-shelf") dispatch({ type: "show-shelf" });
@@ -358,7 +359,7 @@ function EdgeBarApp() {
 
   function pointerIsOnEdge(): boolean {
     const { x } = lastPointerPosition.current;
-    const edgeDistance = 36;
+    const edgeDistance = 14;
     return settings.position === "right" ? x >= window.innerWidth - edgeDistance : x <= edgeDistance;
   }
 
@@ -678,6 +679,25 @@ function getEnabledShelfModules(visibleModules: string[]): Array<typeof widgetRe
   return [...new Set(visibleModules)]
     .map((id) => registeredModules.get(id as ModuleId))
     .filter((module): module is typeof widgetRegistry[number] => Boolean(module));
+}
+
+function getFullShelfModules(
+  shelfModules: Array<typeof widgetRegistry[number]>,
+  peekWidgetIds: string[]
+): Array<typeof widgetRegistry[number]> {
+  const modulesById = new Map(shelfModules.map((module) => [module.id, module]));
+  return [...new Set(peekWidgetIds)]
+    .map((id) => modulesById.get(id as ModuleId))
+    .filter((module): module is typeof widgetRegistry[number] => Boolean(module?.supportsPeek))
+    .slice(0, 2);
+}
+
+function getCompactShelfModules(
+  shelfModules: Array<typeof widgetRegistry[number]>,
+  fullShelfModules: Array<typeof widgetRegistry[number]>
+): Array<typeof widgetRegistry[number]> {
+  const fullModuleIds = new Set(fullShelfModules.map((module) => module.id));
+  return shelfModules.filter((module) => !fullModuleIds.has(module.id));
 }
 
 function fileUrlToPath(value: string): string {

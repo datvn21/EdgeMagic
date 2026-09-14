@@ -1,9 +1,19 @@
 use super::{
-    geometry::{self, EdgePosition, WorkArea},
+    geometry::{self, EdgeGeometry, EdgePosition, WorkArea},
     windows_native,
 };
 use serde::{Deserialize, Serialize};
+use std::sync::{Mutex, OnceLock};
 use tauri::{Manager, WebviewWindow};
+
+static LAST_APPLIED_LAYOUT: OnceLock<Mutex<Option<AppliedLayoutCache>>> = OnceLock::new();
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct AppliedLayoutCache {
+    mode: String,
+    position: EdgePosition,
+    geometry: EdgeGeometry,
+}
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -57,24 +67,52 @@ pub fn apply_edge_window(
     );
     let geometry = geometry::bounds_for_mode(canvas, &request.mode, request.position);
     let was_visible = window.is_visible().map_err(|error| error.to_string())?;
-    prepare(&window)?;
-    windows_native::set_geometry(&window, geometry)?;
-    // Geometry changes can cause Windows to recalculate the non-client area.
-    // Reapply the frameless style before any visible frame can be painted.
-    reapply_frame(&window)?;
+    let next_layout = AppliedLayoutCache {
+        mode: request.mode.clone(),
+        position: request.position,
+        geometry,
+    };
+    let layout_changed = should_apply_layout(&next_layout);
+    if layout_changed || !was_visible {
+        prepare(&window)?;
+        windows_native::set_geometry(&window, geometry)?;
+        // Geometry changes can cause Windows to recalculate the non-client area.
+        // Reapply the frameless style before any visible frame can be painted.
+        reapply_frame(&window)?;
+    }
     crate::tray::set_pinned(window.app_handle(), request.pinned)?;
     if !was_visible {
         window.show().map_err(|error| error.to_string())?;
         reapply_frame(&window)?;
     }
-    // Frame and shape are always the final native operations.
-    windows_native::set_region(&window, geometry, &request.mode, request.position)?;
+    if layout_changed || !was_visible {
+        // Frame and shape are always the final native layout operations.
+        windows_native::set_region(&window, geometry, &request.mode, request.position)?;
+        remember_layout(next_layout);
+    }
     Ok(AppliedEdgeWindowState {
         mode: request.mode,
         position: request.position,
         actual_monitor_id,
         appearance: request.appearance,
     })
+}
+
+fn layout_cache() -> &'static Mutex<Option<AppliedLayoutCache>> {
+    LAST_APPLIED_LAYOUT.get_or_init(|| Mutex::new(None))
+}
+
+fn should_apply_layout(next: &AppliedLayoutCache) -> bool {
+    layout_cache()
+        .lock()
+        .map(|current| current.as_ref() != Some(next))
+        .unwrap_or(true)
+}
+
+fn remember_layout(next: AppliedLayoutCache) {
+    if let Ok(mut current) = layout_cache().lock() {
+        *current = Some(next);
+    }
 }
 
 fn select_monitor(

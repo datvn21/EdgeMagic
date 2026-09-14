@@ -9,7 +9,7 @@ import { Checkbox } from "../../shared/ui/atoms/checkbox.js";
 import { Heading } from "../../shared/ui/atoms/heading.js";
 import { IconButton } from "../../shared/ui/atoms/icon-button.js";
 import { Button } from "../../shared/ui/atoms/button.js";
-import { ChevronDown, ChevronUp, RotateCcw, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Rows2, RotateCcw, Trash2 } from "lucide-react";
 
 export function PeekSettings({ settings, updateSettings }: Pick<SettingsWidgetProps, "settings" | "updateSettings">) {
   const modules = widgetRegistry;
@@ -17,14 +17,17 @@ export function PeekSettings({ settings, updateSettings }: Pick<SettingsWidgetPr
     .map((id) => modules.find((module) => module.id === id))
     .filter((module): module is (typeof modules)[number] => Boolean(module));
   const enabledIds = enabledModules.map((module) => module.id);
+  const enabledIdSet = new Set<string>(enabledIds);
   const orderedModules = [...enabledModules, ...modules.filter((module) => !enabledIds.includes(module.id))];
+  const fullCardIds = settings.peekWidgetIds.filter((id) => enabledIdSet.has(id));
   function toggle(id: string, checked: boolean) {
     if (id === "settings" && !checked) return;
     updateSettings((current) => {
       const visibleModules = checked
         ? [...new Set([...current.visibleModules, id])]
         : current.visibleModules.filter((value) => value !== id && value !== "settings");
-      return { visibleModules, peekWidgetIds: visibleModules.slice(0, 2) };
+      const peekWidgetIds = reconcilePeekWidgetIds(current.peekWidgetIds, visibleModules);
+      return { visibleModules, peekWidgetIds };
     });
   }
   function move(id: string, direction: -1 | 1) {
@@ -34,17 +37,29 @@ export function PeekSettings({ settings, updateSettings }: Pick<SettingsWidgetPr
       if (index < 0 || next < 0 || next >= current.visibleModules.length) return {};
       const result = [...current.visibleModules];
       [result[index]!, result[next]!] = [result[next]!, result[index]!];
-      return { visibleModules: result, peekWidgetIds: result.slice(0, 2) };
+      return { visibleModules: result };
+    });
+  }
+  function toggleFullCard(id: string, checked: boolean) {
+    updateSettings((current) => {
+      const currentPeekIds = current.peekWidgetIds.filter((value) => current.visibleModules.includes(value));
+      if (checked) {
+        if (currentPeekIds.includes(id)) return {};
+        return { peekWidgetIds: [...currentPeekIds, id].slice(0, 2) };
+      }
+      if (currentPeekIds.length <= 1) return {};
+      return { peekWidgetIds: currentPeekIds.filter((value) => value !== id) };
     });
   }
   return <section className="settings-section peek-settings" aria-label="Peek widgets">
     <div className="sync-header">
       <Heading level={2}>Shelf modules</Heading>
-      <div className="peek-header-actions"><strong className="settings-count">{settings.visibleModules.length} enabled</strong><Button type="button" variant="ghost" size="sm" onClick={() => updateSettings({ visibleModules: defaultEdgeSettings.visibleModules, peekWidgetIds: defaultEdgeSettings.visibleModules.slice(0, 2) })}>Reset</Button></div>
+      <div className="peek-header-actions"><strong className="settings-count">{settings.visibleModules.length} enabled</strong><Button type="button" variant="ghost" size="sm" onClick={() => updateSettings({ visibleModules: defaultEdgeSettings.visibleModules, peekWidgetIds: defaultEdgeSettings.peekWidgetIds })}>Reset</Button></div>
     </div>
     <div className="peek-settings-list">{orderedModules.map((module) => {
       const selectedIndex = settings.visibleModules.indexOf(module.id);
       const selected = selectedIndex >= 0;
+      const fullCard = fullCardIds.includes(module.id);
       return <div className="peek-setting-row" data-selected={selected} key={module.id} aria-label={selected ? `${module.label} position ${selectedIndex + 1}` : `${module.label} disabled`}>
         <Checkbox
           className="peek-choice"
@@ -54,6 +69,17 @@ export function PeekSettings({ settings, updateSettings }: Pick<SettingsWidgetPr
           label={module.label}
           aria-label={`${selected ? "Disable" : "Enable"} ${module.label} shelf module`}
         />
+        {selected && module.supportsPeek ? <button
+          type="button"
+          className="peek-mode-button"
+          aria-pressed={fullCard}
+          disabled={(fullCard && fullCardIds.length <= 1) || (!fullCard && fullCardIds.length >= 2)}
+          onClick={() => toggleFullCard(module.id, !fullCard)}
+          title={fullCard ? "Full card" : "Icon only"}
+          aria-label={`${fullCard ? "Hide" : "Show"} ${module.label} as full shelf card`}
+        >
+          <Rows2 size={16} aria-hidden="true" />
+        </button> : null}
         {selected ? <div className="peek-order-actions">
           <IconButton label={`Move ${module.label} up`} title="Move up" disabled={selectedIndex === 0} onClick={() => move(module.id, -1)}><ChevronUp size={16} aria-hidden="true" /></IconButton>
           <IconButton label={`Move ${module.label} down`} title="Move down" disabled={selectedIndex === settings.visibleModules.length - 1} onClick={() => move(module.id, 1)}><ChevronDown size={16} aria-hidden="true" /></IconButton>
@@ -61,6 +87,12 @@ export function PeekSettings({ settings, updateSettings }: Pick<SettingsWidgetPr
       </div>;
     })}</div>
   </section>;
+}
+
+function reconcilePeekWidgetIds(peekWidgetIds: string[], visibleModules: string[]): string[] {
+  const visiblePeekModules = visibleModules.filter((id) => widgetRegistry.some((module) => module.id === id && module.supportsPeek));
+  const result = peekWidgetIds.filter((id) => visiblePeekModules.includes(id)).slice(0, 2);
+  return result.length > 0 ? result : visiblePeekModules.slice(0, 1);
 }
 
 export function DataOwnershipSection({ settings, updateSettings, captureInbox, productivity, platform }: Pick<SettingsWidgetProps, "settings" | "updateSettings" | "captureInbox" | "productivity" | "platform">) {
