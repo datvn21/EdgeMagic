@@ -161,9 +161,15 @@ pub fn run() {
             delete_dropped_file
         ])
         .on_window_event(|webview_window, event| {
-            if webview_window.label() == "main" && matches!(event, WindowEvent::Focused(true)) {
+            if webview_window.label() == "main" && matches!(event, WindowEvent::Focused(_)) {
                 if let Some(main) = webview_window.app_handle().get_webview_window("main") {
-                    let _ = window::reapply_frame(&main);
+                    // Losing focus is the point at which another app has
+                    // entered the foreground. Restore topmost without
+                    // stealing focus back from that app.
+                    let _ = window::controller::ensure_always_on_top(&main);
+                    if matches!(event, WindowEvent::Focused(true)) {
+                        let _ = window::reapply_frame(&main);
+                    }
                 }
             }
             if let WindowEvent::CloseRequested { api, .. } = event {

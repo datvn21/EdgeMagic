@@ -146,6 +146,27 @@ pub fn set_geometry(window: &WebviewWindow, geometry: EdgeGeometry) -> Result<()
     Ok(())
 }
 
+pub fn ensure_topmost(window: &WebviewWindow) -> Result<(), String> {
+    #[cfg(windows)]
+    unsafe {
+        SetWindowPos(
+            root_hwnd(window.hwnd().map_err(|error| error.to_string())?),
+            Some(HWND_TOPMOST),
+            0,
+            0,
+            0,
+            0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_NOOWNERZORDER,
+        )
+        .map_err(|error| error.to_string())?;
+    }
+    #[cfg(not(windows))]
+    window
+        .set_always_on_top(true)
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 pub fn set_region(
     window: &WebviewWindow,
     geometry: EdgeGeometry,
