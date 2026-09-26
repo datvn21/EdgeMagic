@@ -3,7 +3,7 @@ use serde::Serialize;
 pub const CANVAS_WIDTH_LOGICAL: f64 = 380.0;
 pub const SURFACE_HEIGHT_LOGICAL: f64 = 820.0;
 pub const SURFACE_MARGIN_LOGICAL: f64 = 12.0;
-pub const COLLAPSED_THICKNESS_LOGICAL: f64 = 14.0;
+pub const COLLAPSED_THICKNESS_LOGICAL: f64 = 24.0;
 pub const COLLAPSED_HEIGHT_LOGICAL: f64 = 72.0;
 pub const SURFACE_CORNER_DIAMETER_LOGICAL: f64 = 40.0;
 
@@ -126,7 +126,7 @@ mod tests {
         );
         assert_eq!(result.width, 570);
         assert_eq!(result.surface_height, 664);
-        assert_eq!(result.collapsed_thickness, 21);
+        assert_eq!(result.collapsed_thickness, 36);
         assert_eq!(result.collapsed_height, 108);
     }
 
@@ -176,7 +176,7 @@ mod tests {
         let collapsed = bounds_for_mode(canvas, "collapsed", EdgePosition::Right);
         assert_eq!(
             (collapsed.x, collapsed.y, collapsed.width, collapsed.height),
-            (1906, 540, 14, 72)
+            (1896, 540, 24, 72)
         );
         let shelf = bounds_for_mode(canvas, "shelf", EdgePosition::Right);
         assert_eq!(

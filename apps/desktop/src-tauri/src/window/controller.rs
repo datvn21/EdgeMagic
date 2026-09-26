@@ -42,6 +42,10 @@ pub fn reapply_frame(window: &WebviewWindow) -> Result<(), String> {
     windows_native::frameless(window)
 }
 
+pub fn ensure_always_on_top(window: &WebviewWindow) -> Result<(), String> {
+    windows_native::ensure_topmost(window)
+}
+
 #[tauri::command]
 pub fn apply_edge_window(
     window: WebviewWindow,
@@ -67,6 +71,9 @@ pub fn apply_edge_window(
     );
     let geometry = geometry::bounds_for_mode(canvas, &request.mode, request.position);
     let was_visible = window.is_visible().map_err(|error| error.to_string())?;
+    // Reassert this even when the cached layout is unchanged. Windows can
+    // update the z-order when another application becomes active.
+    ensure_always_on_top(&window)?;
     let next_layout = AppliedLayoutCache {
         mode: request.mode.clone(),
         position: request.position,
