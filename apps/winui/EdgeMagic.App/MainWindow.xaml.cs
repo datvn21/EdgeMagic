@@ -66,9 +66,8 @@ public sealed partial class MainWindow : Window
         _reminderTimer.Tick += async (_, _) => await DeliverDueRemindersAsync();
         Closed += (_, _) => { _hideTimer.Stop(); _reminderTimer.Stop(); _tray.Dispose(); };
 
-        var choices = DisplayArea.FindAll().Select((display, index) => new DisplayChoice(
-            display,
-            $"Display {index + 1}{(display.IsPrimary ? " (primary)" : "")}")).ToArray();
+        var display = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary);
+        var choices = new[] { new DisplayChoice(display, display.IsPrimary ? "Primary display" : "Current display") };
         DisplayChoices.ItemsSource = choices;
         DisplayChoices.SelectedItem = choices.FirstOrDefault(choice => choice.Display.IsPrimary);
     }

@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 
 $project = Join-Path $PSScriptRoot "EdgeMagic.App\EdgeMagic.App.csproj"
+$packageOutput = Join-Path $PSScriptRoot ("EdgeMagic.App\AppPackages\Build-" + (Get-Date -Format "yyyyMMdd-HHmmss") + "\")
 $buildArgs = @(
     "build", $project,
     "-c", "Release",
@@ -10,13 +11,14 @@ $buildArgs = @(
     "-p:GenerateAppxPackageOnBuild=true",
     "-p:AppxPackageSigningEnabled=false",
     "-p:AppxSymbolPackageEnabled=false",
-    "-p:AppxLogTelemetryFromSideloadingScript=false"
+    "-p:AppxLogTelemetryFromSideloadingScript=false",
+    "-p:AppxPackageDir=$packageOutput"
 )
 & dotnet @buildArgs
 if ($LASTEXITCODE -ne 0) { throw "MSIX build failed with exit code $LASTEXITCODE." }
 
-$package = Get-ChildItem (Join-Path $PSScriptRoot "EdgeMagic.App\AppPackages") -Filter "EdgeMagic.App_0.1.0.0_x64.msix" -File -Recurse |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+$package = Get-ChildItem $packageOutput -Filter "EdgeMagic.App_*_x64.msix" -File -Recurse |
+    Select-Object -First 1
 if (-not $package) { throw "MSIX build completed but no x64 package was found." }
 
 $publisher = "CN=EdgeMagic Local"
