@@ -1,8 +1,8 @@
 # EdgeMagic WinUI 3
 
-The WinUI app is an early Windows replacement for the Tauri desktop shell. It reads the existing SQLite database at `%APPDATA%\app.edgemagic.desktop\edgemagic.db` and currently provides:
+The WinUI app is a native WinUI 3 replacement for the Tauri desktop shell. Its controls are XAML/WinUI controls; it does not host the web frontend. The window uses the Windows Desktop Acrylic backdrop. It reads `%APPDATA%\app.edgemagic.desktop\edgemagic.db` when present, and creates the SQLite schema there on first launch when no database exists.
 
-- Edge shelf positioning, monitor selection, auto-collapse, pinning, tray menu, and `Ctrl+Space`.
+- Edge shelf positioning, primary-display placement, auto-collapse, pinning, tray menu, and `Ctrl+Space`.
 - Inbox captures for pasted/copied text and links, plus files dropped from Explorer.
 - Clipboard image capture copied into the existing app-data folder with an attachment record.
 - Notes create, edit, and soft-delete actions; to-do create, complete, and soft-delete actions.
@@ -15,7 +15,7 @@ The WinUI app is an early Windows replacement for the Tauri desktop shell. It re
 
 ## Run from source
 
-Use Windows with the .NET 10 SDK. Open the existing Tauri app once so its database exists, then close it before starting WinUI. Both apps must not write to the same database at the same time.
+Use Windows with the .NET 10 SDK. If the Tauri database already exists, close Tauri before starting WinUI; both apps must not write to the same database at the same time. On a fresh install, WinUI creates an empty database and starts without requiring Tauri first.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File apps/winui/build-package.ps1
@@ -37,7 +37,7 @@ powershell -ExecutionPolicy Bypass -File apps/winui/build-package.ps1
 
 The script creates a local development signing certificate and puts the public `.cer` beside the package. Run the generated `Install.ps1` in the package folder to sideload it; Windows will ask before trusting that certificate. This certificate is for local development only, not public distribution. A production release needs an organization/store publisher certificate.
 
-The app refuses to create a new database if the Tauri database is missing. Notes, tasks, reminders, and saved links use the same tables as the existing app; captures are stored in its `items` and `item_search` tables. Deletes set `deleted_at` and preserve the row.
+Notes, tasks, reminders, and saved links use the same tables as the existing app; captures are stored in its `items` and `item_search` tables. Deletes set `deleted_at` and preserve the row.
 
 ## Not ready to replace the released app
 
