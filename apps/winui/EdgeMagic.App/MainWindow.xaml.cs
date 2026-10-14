@@ -66,10 +66,7 @@ public sealed partial class MainWindow : Window
         _reminderTimer.Tick += async (_, _) => await DeliverDueRemindersAsync();
         Closed += (_, _) => { _hideTimer.Stop(); _reminderTimer.Stop(); _tray.Dispose(); };
 
-        var display = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary);
-        var choices = new[] { new DisplayChoice(display, display.IsPrimary ? "Primary display" : "Current display") };
-        DisplayChoices.ItemsSource = choices;
-        DisplayChoices.SelectedItem = choices.FirstOrDefault(choice => choice.Display.IsPrimary);
+        _selectedDisplay = DisplayArea.GetFromWindowId(_appWindow.Id, DisplayAreaFallback.Primary);
     }
 
     private async void OnRootLoaded(object sender, RoutedEventArgs e)
@@ -116,18 +113,24 @@ public sealed partial class MainWindow : Window
         finally { _checkingDueReminders = false; }
     }
 
-    private void OnDisplayChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs e)
-    {
-        _selectedDisplay = (DisplayChoices.SelectedItem as DisplayChoice)?.Display;
-        ApplyLayout();
-    }
-
-    private void OnSectionChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs e)
+    private void OnNavigationSelectionChanged(object sender, Microsoft.UI.Xaml.Controls.NavigationViewSelectionChangedEventArgs e)
     {
         if (InboxPanel is null) return;
-        var panels = new[] { InboxPanel, NotesPanel, TodosPanel, RemindersPanel, SavedPanel, BookmarksPanel, SettingsPanel };
-        var selected = Math.Clamp(SectionChoices.SelectedIndex, 0, panels.Length - 1);
-        for (var index = 0; index < panels.Length; index++) panels[index].Visibility = index == selected ? Visibility.Visible : Visibility.Collapsed;
+        if (e.SelectedItem is not Microsoft.UI.Xaml.Controls.NavigationViewItem item) return;
+        var selected = item.Tag?.ToString() switch
+        {
+            "Inbox" => InboxPanel,
+            "Notes" => NotesPanel,
+            "Todos" => TodosPanel,
+            "Reminders" => RemindersPanel,
+            "Saved" => SavedPanel,
+            "Bookmarks" => BookmarksPanel,
+            "Settings" => SettingsPanel,
+            _ => null
+        };
+        if (selected is null) return;
+        foreach (var panel in new[] { InboxPanel, NotesPanel, TodosPanel, RemindersPanel, SavedPanel, BookmarksPanel, SettingsPanel })
+            panel.Visibility = ReferenceEquals(panel, selected) ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void OnXamlRootChanged(XamlRoot sender, XamlRootChangedEventArgs args)
@@ -557,7 +560,6 @@ public sealed partial class MainWindow : Window
         _appWindow.MoveAndResize(bounds);
     }
 
-    private sealed record DisplayChoice(DisplayArea Display, string Name);
     private sealed record ReminderRow(string Id, string Title, string When);
     private sealed record CaptureRow(string Id, string Title, string Preview, string Source);
     private enum EdgePosition { Left, Right }

@@ -1,3 +1,4 @@
+<!-- Hallmark · pre-emit critique: P4 H4 E4 S4 R5 V3 -->
 <Window
     x:Class="EdgeMagic.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -6,24 +7,47 @@
   <Window.SystemBackdrop>
     <DesktopAcrylicBackdrop />
   </Window.SystemBackdrop>
-  <Grid x:Name="Root" Background="Transparent" Loaded="OnRootLoaded" PointerEntered="OnPointerEntered" PointerExited="OnPointerExited">
-    <Border Margin="8" Padding="16" CornerRadius="16" Background="#B81C1C1C" BorderBrush="#40FFFFFF" BorderThickness="1">
-      <Grid RowDefinitions="Auto,Auto,*,Auto">
+  <NavigationView x:Name="AppNavigation" PaneDisplayMode="LeftMinimal" IsPaneOpen="False"
+                  IsBackButtonVisible="Collapsed" IsSettingsVisible="False"
+                  Background="Transparent" RequestedTheme="Dark" SelectionChanged="OnNavigationSelectionChanged">
+    <NavigationView.MenuItems>
+      <NavigationViewItem Content="Inbox" Tag="Inbox" IsSelected="True">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Mail" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+      <NavigationViewItem Content="Notes" Tag="Notes">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Page" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+      <NavigationViewItem Content="To do" Tag="Todos">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Accept" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+      <NavigationViewItem Content="Reminders" Tag="Reminders">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Clock" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+      <NavigationViewItem Content="Saved links" Tag="Saved">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Save" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+      <NavigationViewItem Content="Bookmarks" Tag="Bookmarks">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Bookmarks" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+    </NavigationView.MenuItems>
+    <NavigationView.FooterMenuItems>
+      <NavigationViewItem Content="Settings" Tag="Settings">
+        <NavigationViewItem.Icon><SymbolIcon Symbol="Setting" /></NavigationViewItem.Icon>
+      </NavigationViewItem>
+    </NavigationView.FooterMenuItems>
+    <NavigationView.Content>
+      <Grid x:Name="Root" Margin="8,8,12,8" Background="Transparent" Loaded="OnRootLoaded" PointerEntered="OnPointerEntered" PointerExited="OnPointerExited">
+        <Grid RowDefinitions="Auto,*,Auto">
         <Grid ColumnDefinitions="*,Auto,Auto">
           <TextBlock Text="EdgeMagic" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Button Grid.Column="1" Margin="4,0" Content="←" ToolTipService.ToolTip="Move to left edge" Click="OnLeftEdge" />
-          <Button Grid.Column="2" Margin="4,0,0,0" Content="→" ToolTipService.ToolTip="Move to right edge" Click="OnRightEdge" />
+          <Button Grid.Column="1" Margin="4,0" AutomationProperties.Name="Move to left edge" ToolTipService.ToolTip="Move to left edge" Click="OnLeftEdge">
+            <SymbolIcon Symbol="Previous" />
+          </Button>
+          <Button Grid.Column="2" Margin="4,0,0,0" AutomationProperties.Name="Move to right edge" ToolTipService.ToolTip="Move to right edge" Click="OnRightEdge">
+            <SymbolIcon Symbol="Next" />
+          </Button>
         </Grid>
-        <ComboBox x:Name="SectionChoices" Grid.Row="1" Margin="0,12,0,8" SelectedIndex="0" SelectionChanged="OnSectionChanged">
-          <ComboBoxItem Content="Inbox" />
-          <ComboBoxItem Content="Notes" />
-          <ComboBoxItem Content="To do" />
-          <ComboBoxItem Content="Reminders" />
-          <ComboBoxItem Content="Saved links" />
-          <ComboBoxItem Content="Bookmarks" />
-          <ComboBoxItem Content="Settings" />
-        </ComboBox>
-        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="1" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto">
           <Grid>
             <StackPanel x:Name="InboxPanel" Spacing="10" AllowDrop="True" DragOver="OnInboxDragOver" Drop="OnInboxDrop">
               <TextBlock Text="Capture something to keep it in your inbox." Foreground="#a1a1a1" TextWrapping="Wrap" />
@@ -152,7 +176,6 @@
             </StackPanel>
             <StackPanel x:Name="SettingsPanel" Spacing="12" Visibility="Collapsed">
               <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" />
-              <ComboBox x:Name="DisplayChoices" Header="Monitor" DisplayMemberPath="Name" SelectionChanged="OnDisplayChanged" />
               <TextBlock Text="Move to the edge handle to reopen the shelf. Leaving the shelf collapses it." TextWrapping="Wrap" Foreground="#a1a1a1" />
               <TextBlock x:Name="HotkeyStatus" Foreground="#a1a1a1" />
               <CheckBox x:Name="ClipboardCaptureToggle" Content="Capture copied text automatically" IsChecked="True" Click="OnClipboardCaptureToggle" />
@@ -171,8 +194,9 @@
             </StackPanel>
           </Grid>
         </ScrollViewer>
-        <TextBlock x:Name="DataStatus" Grid.Row="3" Margin="0,10,0,0" Foreground="#a1a1a1" TextWrapping="Wrap" />
+        <TextBlock x:Name="DataStatus" Grid.Row="2" Margin="0,10,0,0" Foreground="#a1a1a1" TextWrapping="Wrap" />
       </Grid>
-    </Border>
-  </Grid>
+    </Grid>
+    </NavigationView.Content>
+  </NavigationView>
 </Window>
