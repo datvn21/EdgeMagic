@@ -9,6 +9,7 @@ using WinRT.Interop;
 using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Security.Cryptography;
 
 namespace EdgeMagic.App;
 
@@ -19,6 +20,8 @@ public sealed partial class MainWindow : Window
     private readonly ProductivityStore _productivity = new();
     private readonly BackupService _backup;
     private readonly DispatcherTimer _hideTimer;
+    private readonly DispatcherTimer _reminderTimer;
+    private readonly ReminderNotifications _reminderNotifications = new();
     private DisplayArea? _selectedDisplay;
     private EdgePosition _position = EdgePosition.Right;
     private bool _collapsed;
@@ -26,8 +29,11 @@ public sealed partial class MainWindow : Window
     private bool _quitRequested;
     private bool _observingRoot;
     private bool _dataLoaded;
+    private bool _checkingDueReminders;
+    private bool _notificationsRegistered;
     private bool _clipboardCaptureEnabled = true;
     private string? _lastClipboardText;
+    private string? _lastClipboardImageHash;
     private DateTimeOffset _lastClipboardCapture;
     private List<NoteItem> _notes = [];
     private List<BrowserBookmark> _bookmarks = [];
@@ -56,7 +62,9 @@ public sealed partial class MainWindow : Window
 
         _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(450) };
         _hideTimer.Tick += (_, _) => { _hideTimer.Stop(); if (!_pinned) Collapse(); };
-        Closed += (_, _) => { _hideTimer.Stop(); _tray.Dispose(); };
+        _reminderTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(15) };
+        _reminderTimer.Tick += async (_, _) => await DeliverDueRemindersAsync();
+        Closed += (_, _) => { _hideTimer.Stop(); _reminderTimer.Stop(); _tray.Dispose(); };
 
         var choices = DisplayArea.FindAll().Select((display, index) => new DisplayChoice(
             display,
@@ -74,7 +82,39 @@ public sealed partial class MainWindow : Window
             _observingRoot = true;
         }
         ApplyLayout();
-        if (!_dataLoaded) await LoadProductivityAsync();
+        if (!_dataLoaded)
+        {
+            await LoadProductivityAsync();
+            if (_dataLoaded)
+            {
+                try
+                {
+                    _reminderNotifications.Register();
+                    _notificationsRegistered = true;
+                    _reminderTimer.Start();
+                    await DeliverDueRemindersAsync();
+                }
+                catch (Exception ex) { DataStatus.Text += $" · Windows notifications unavailable: {ex.Message}"; }
+            }
+        }
+    }
+
+    private async Task DeliverDueRemindersAsync()
+    {
+        if (!_notificationsRegistered || _checkingDueReminders) return;
+        _checkingDueReminders = true;
+        try
+        {
+            var due = await _productivity.GetDueRemindersAsync(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+            foreach (var reminder in due)
+            {
+                _reminderNotifications.Show(reminder.Title);
+                await _productivity.MarkReminderFiredAsync(reminder.Id);
+            }
+            if (due.Count > 0) await LoadProductivityAsync();
+        }
+        catch (Exception ex) { DataStatus.Text = $"Could not deliver reminder: {ex.Message}"; }
+        finally { _checkingDueReminders = false; }
     }
 
     private void OnDisplayChanged(object sender, Microsoft.UI.Xaml.Controls.SelectionChangedEventArgs e)
@@ -115,6 +155,11 @@ public sealed partial class MainWindow : Window
         try
         {
             var content = Clipboard.GetContent();
+            if (content.Contains(StandardDataFormats.Bitmap))
+            {
+                await CaptureClipboardImageAsync(content);
+                return;
+            }
             if (!content.Contains(StandardDataFormats.Text))
             {
                 DataStatus.Text = "The clipboard does not contain text.";
@@ -172,6 +217,11 @@ public sealed partial class MainWindow : Window
         try
         {
             var content = Clipboard.GetContent();
+            if (content.Contains(StandardDataFormats.Bitmap))
+            {
+                await CaptureClipboardImageAsync(content);
+                return;
+            }
             if (!content.Contains(StandardDataFormats.Text)) return;
             var text = (await content.GetTextAsync()).Trim();
             if (text.Length == 0 || (text == _lastClipboardText && DateTimeOffset.UtcNow - _lastClipboardCapture < TimeSpan.FromSeconds(2))) return;
@@ -180,6 +230,26 @@ public sealed partial class MainWindow : Window
             await RunDataActionAsync(() => _productivity.AddCaptureAsync(text, "clipboard"));
         }
         catch (Exception ex) { DataStatus.Text = $"Could not capture clipboard text: {ex.Message}"; }
+    }
+
+    private async Task CaptureClipboardImageAsync(DataPackageView content)
+    {
+        if (!content.Contains(StandardDataFormats.Bitmap)) return;
+        var bitmap = await content.GetBitmapAsync();
+        using var stream = await bitmap.OpenReadAsync();
+        using var source = stream.AsStreamForRead();
+        using var buffer = new MemoryStream();
+        await source.CopyToAsync(buffer);
+        var bytes = buffer.ToArray();
+        if (bytes.Length == 0 || bytes.Length > 50 * 1024 * 1024) return;
+        var hash = Convert.ToHexString(SHA256.HashData(bytes));
+        if (hash == _lastClipboardImageHash && DateTimeOffset.UtcNow - _lastClipboardCapture < TimeSpan.FromSeconds(3)) return;
+        _lastClipboardImageHash = hash;
+        _lastClipboardCapture = DateTimeOffset.UtcNow;
+        var mimeType = string.IsNullOrWhiteSpace(stream.ContentType) ? "image/png" : stream.ContentType;
+        var extension = mimeType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase) ? ".jpg" : ".png";
+        var filename = $"clipboard-{DateTimeOffset.UtcNow:yyyyMMdd-HHmmss}{extension}";
+        await RunDataActionAsync(() => _productivity.AddClipboardImageCaptureAsync(bytes, filename, mimeType));
     }
 
     private async void OnAddNote(object sender, RoutedEventArgs e)

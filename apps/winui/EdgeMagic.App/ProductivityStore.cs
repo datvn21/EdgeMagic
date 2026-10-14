@@ -185,6 +185,26 @@ internal sealed class ProductivityStore
     public Task AddReminderAsync(string title, DateTimeOffset remindAt) => InsertAsync("INSERT INTO reminders(id,title,remind_at,status,created_at,updated_at,deleted_at) VALUES($id,$title,$at,'scheduled',$now,$now,NULL)",
         ("$id", Guid.NewGuid().ToString()), ("$title", title.Trim()), ("$at", remindAt.ToUnixTimeMilliseconds()), ("$now", Now));
     public Task DeleteReminderAsync(string id) => SoftDeleteAsync("reminders", id);
+    public async Task<List<ReminderItem>> GetDueRemindersAsync(long now)
+    {
+        await using var connection = await OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT id,title,remind_at,status FROM reminders WHERE deleted_at IS NULL AND status='scheduled' AND remind_at <= $now ORDER BY remind_at";
+        command.Parameters.AddWithValue("$now", now);
+        await using var reader = await command.ExecuteReaderAsync();
+        var reminders = new List<ReminderItem>();
+        while (await reader.ReadAsync()) reminders.Add(new(reader.GetString(0), reader.GetString(1), reader.GetInt64(2), reader.GetString(3)));
+        return reminders;
+    }
+
+    public async Task MarkReminderFiredAsync(string id)
+    {
+        await using var connection = await OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "UPDATE reminders SET status='fired',updated_at=$now WHERE id=$id AND status='scheduled' AND deleted_at IS NULL";
+        command.Parameters.AddWithValue("$id", id); command.Parameters.AddWithValue("$now", Now);
+        await command.ExecuteNonQueryAsync();
+    }
     public Task AddSavedAsync(string title, string? url, string? path) => InsertAsync("INSERT INTO saved_items(id,title,url,path,created_at,updated_at,deleted_at) VALUES($id,$title,$url,$path,$now,$now,NULL)",
         ("$id", Guid.NewGuid().ToString()), ("$title", title.Trim()), ("$url", (object?)url ?? DBNull.Value), ("$path", (object?)path ?? DBNull.Value), ("$now", Now));
     public Task DeleteSavedAsync(string id) => SoftDeleteAsync("saved_items", id);
@@ -284,7 +304,7 @@ internal sealed class ProductivityStore
         await transaction.CommitAsync();
     }
 
-    public async Task AddFileCaptureAsync(string path, string filename, long size, string mimeType)
+    public async Task AddFileCaptureAsync(string path, string filename, long size, string mimeType, string source = "drag-drop")
     {
         var id = Guid.NewGuid().ToString();
         var now = Now;
@@ -294,9 +314,10 @@ internal sealed class ProductivityStore
         await using (var command = connection.CreateCommand())
         {
             command.Transaction = (SqliteTransaction)transaction;
-            command.CommandText = "INSERT INTO items(id,type,title,path,source,metadata_json,created_at,updated_at,deleted_at) VALUES($id,$type,$title,$path,'drag-drop',$metadata,$now,$now,NULL)";
+            command.CommandText = "INSERT INTO items(id,type,title,path,source,metadata_json,created_at,updated_at,deleted_at) VALUES($id,$type,$title,$path,$source,$metadata,$now,$now,NULL)";
             command.Parameters.AddWithValue("$id", id); command.Parameters.AddWithValue("$type", kind); command.Parameters.AddWithValue("$title", filename);
-            command.Parameters.AddWithValue("$path", path); command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(new { fileName = filename, fileSize = size, fileType = mimeType, dragDrop = new { kind } }));
+            command.Parameters.AddWithValue("$path", path); command.Parameters.AddWithValue("$source", source);
+            command.Parameters.AddWithValue("$metadata", JsonSerializer.Serialize(new { fileName = filename, fileSize = size, fileType = mimeType, captureMethod = source }));
             command.Parameters.AddWithValue("$now", now);
             await command.ExecuteNonQueryAsync();
         }
@@ -317,6 +338,20 @@ internal sealed class ProductivityStore
             await command.ExecuteNonQueryAsync();
         }
         await transaction.CommitAsync();
+    }
+
+    public async Task AddClipboardImageCaptureAsync(byte[] imageBytes, string filename, string mimeType)
+    {
+        var directory = Path.Combine(Path.GetDirectoryName(_databasePath)!, "attachments");
+        Directory.CreateDirectory(directory);
+        var path = Path.Combine(directory, $"{Guid.NewGuid():N}-{Path.GetFileName(filename)}");
+        await File.WriteAllBytesAsync(path, imageBytes);
+        try { await AddFileCaptureAsync(path, filename, imageBytes.LongLength, mimeType, "clipboard"); }
+        catch
+        {
+            File.Delete(path);
+            throw;
+        }
     }
 
     public async Task DeleteCaptureAsync(string id)

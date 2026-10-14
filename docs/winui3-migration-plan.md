@@ -77,8 +77,9 @@ The current implementation blocks Notes/Todo access while the legacy `edgemagic.
 - Added Chrome/Edge Chromium bookmark JSON import using the existing `edgemagic.browser-bookmarks` setting, URL deduplication, clear, and open-in-browser actions.
 - Added backup file pickers for the existing EdgeMagic JSON backup format. The UI warns that backups are unencrypted and attachment files are not copied.
 - Added idempotent SQLite triggers that enqueue local item and productivity changes in the existing `sync_queue`; Settings reports pending and failed entries. No sync provider or worker is enabled yet.
+- Added clipboard image capture to a managed app-data attachment file and Windows App Notifications for due reminders while the app process is running.
 - Confirmed the expected `%APPDATA%\app.edgemagic.desktop\edgemagic.db` file exists and, in a read-only inspection, contains the released SQLx migration records and required tables. No user database rows were changed during that inspection.
 - `dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj --no-restore` succeeds with zero warnings and errors.
 - The legacy `edgemagic` process is currently running, so the WinUI app has not been launched against the real database. It intentionally refuses concurrent access.
 
-Still required before replacing Tauri: test writes on a separate copy of the actual database; finish image capture, reminder notifications, sync provider/worker, settings parity, accessibility, true transparent window regions, and MSIX install/upgrade validation. Keep the Tauri app available.
+Still required before replacing Tauri: test writes on a separate copy of the actual database; finish reminders when the app is not running, sync provider/worker, settings parity, accessibility, true transparent window regions, and MSIX install/upgrade validation. Keep the Tauri app available.
