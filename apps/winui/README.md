@@ -18,16 +18,18 @@ The WinUI app is an early Windows replacement for the Tauri desktop shell. It re
 Use Windows with the .NET 10 SDK. Open the existing Tauri app once so its database exists, then close it before starting WinUI. Both apps must not write to the same database at the same time.
 
 ```powershell
-dotnet run --project apps/winui/EdgeMagic.App/EdgeMagic.App.csproj
+powershell -ExecutionPolicy Bypass -File apps/winui/build-package.ps1
 ```
 
-To compile without launching:
+Install the generated MSIX using the `Install.ps1` next to it, then launch **EdgeMagic** from Start. The app is packaged with its Windows App SDK runtime; launching `EdgeMagic.App.exe` directly from `bin` will not work reliably because it has no package identity. The install script will ask before trusting the local development certificate.
+
+To compile without creating a package:
 
 ```powershell
 dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj
 ```
 
-To create a locally signed x64 MSIX package:
+To create or refresh a locally signed x64 MSIX package:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File apps/winui/build-package.ps1
