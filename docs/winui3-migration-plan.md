@@ -68,3 +68,16 @@ Deliver a small WinUI 3 spike that opens beside the existing app and demonstrate
 - [ ] Finish transparent/rounded window behavior and remaining workflows in the parity checklist.
 
 The current implementation blocks Notes/Todo access while the legacy `edgemagic.exe` process is running. The migration is still in progress; this branch is not ready to replace or remove the Tauri app.
+
+## Progress (2026-10-14)
+
+- Expanded the WinUI surface to Inbox, Notes, To do, Reminders, Saved links, and Settings.
+- Added persisted text/link captures, Explorer file drops with attachment records, note/task/reminder/saved-item operations, and automatic clipboard text capture with an enable switch.
+- Reused the existing `edgemagic.edge-settings` JSON row for clipboard capture and shelf-position preferences.
+- Added Chrome/Edge Chromium bookmark JSON import using the existing `edgemagic.browser-bookmarks` setting, URL deduplication, clear, and open-in-browser actions.
+- Added backup file pickers for the existing EdgeMagic JSON backup format. The UI warns that backups are unencrypted and attachment files are not copied.
+- Confirmed the expected `%APPDATA%\app.edgemagic.desktop\edgemagic.db` file exists and, in a read-only inspection, contains the released SQLx migration records and required tables. No user database rows were changed during that inspection.
+- `dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj --no-restore` succeeds with zero warnings and errors.
+- The legacy `edgemagic` process is currently running, so the WinUI app has not been launched against the real database. It intentionally refuses concurrent access.
+
+Still required before replacing Tauri: test writes on a separate copy of the actual database; finish image capture, reminder notifications, sync queue integration, settings parity, accessibility, true transparent window regions, and MSIX install/upgrade validation. Keep the Tauri app available.

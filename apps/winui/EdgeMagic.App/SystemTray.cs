@@ -18,6 +18,7 @@ internal sealed class SystemTray : IDisposable
     private const uint WmRightButtonUp = 0x0205;
     private const uint WmContextMenu = 0x007B;
     private const uint WmHotKey = 0x0312;
+    private const uint WmClipboardUpdate = 0x031D;
     private const uint ModControl = 0x0002;
     private const uint VkSpace = 0x20;
     private const uint MfString = 0;
@@ -41,11 +42,12 @@ internal sealed class SystemTray : IDisposable
     private readonly Func<bool> _isPinned;
     private readonly Action _togglePin;
     private readonly Action _quit;
+    private readonly Action _clipboardChanged;
     private NotifyIconData _data;
     private bool _disposed;
     public bool HotkeyRegistered { get; }
 
-    public SystemTray(IntPtr window, Action show, Action collapse, Func<bool> isPinned, Action togglePin, Action quit)
+    public SystemTray(IntPtr window, Action show, Action collapse, Func<bool> isPinned, Action togglePin, Action quit, Action clipboardChanged)
     {
         _window = window;
         _show = show;
@@ -53,6 +55,7 @@ internal sealed class SystemTray : IDisposable
         _isPinned = isPinned;
         _togglePin = togglePin;
         _quit = quit;
+        _clipboardChanged = clipboardChanged;
         _procedure = WindowProcedure;
         _taskbarCreatedMessage = RegisterWindowMessageW("TaskbarCreated");
         _icon = LoadImageW(IntPtr.Zero, Path.Combine(AppContext.BaseDirectory, "Assets", "icon.ico"), ImageIcon, 0, 0, LoadFromFile);
@@ -76,10 +79,12 @@ internal sealed class SystemTray : IDisposable
             DestroyIcon(_icon);
             throw new Win32Exception(Marshal.GetLastWin32Error(), "Could not install the tray message handler.");
         }
+        AddClipboardFormatListener(window);
         HotkeyRegistered = RegisterHotKey(window, HotkeyId, ModControl, VkSpace);
         if (!Shell_NotifyIconW(NimAdd, ref _data))
         {
             if (HotkeyRegistered) UnregisterHotKey(window, HotkeyId);
+            RemoveClipboardFormatListener(window);
             RemoveWindowSubclass(window, _procedure, SubclassId);
             DestroyIcon(_icon);
             throw new InvalidOperationException("Could not create the EdgeMagic notification area icon.");
@@ -91,6 +96,7 @@ internal sealed class SystemTray : IDisposable
         if (_disposed) return;
         _disposed = true;
         Shell_NotifyIconW(NimDelete, ref _data);
+        RemoveClipboardFormatListener(_window);
         if (HotkeyRegistered) UnregisterHotKey(_window, HotkeyId);
         RemoveWindowSubclass(_window, _procedure, SubclassId);
         DestroyIcon(_icon);
@@ -113,6 +119,11 @@ internal sealed class SystemTray : IDisposable
         if (message == WmHotKey && wParam.ToUInt64() == HotkeyId)
         {
             _show();
+            return IntPtr.Zero;
+        }
+        if (message == WmClipboardUpdate)
+        {
+            _clipboardChanged();
             return IntPtr.Zero;
         }
         return DefSubclassProc(window, message, wParam, lParam);
@@ -178,6 +189,8 @@ internal sealed class SystemTray : IDisposable
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)] private static extern uint RegisterWindowMessageW(string name);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool RegisterHotKey(IntPtr window, int id, uint modifiers, uint virtualKey);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnregisterHotKey(IntPtr window, int id);
+    [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool AddClipboardFormatListener(IntPtr window);
+    [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool RemoveClipboardFormatListener(IntPtr window);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool DestroyIcon(IntPtr icon);
     [DllImport("comctl32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool SetWindowSubclass(IntPtr window, SubclassProcedure procedure, UIntPtr subclassId, IntPtr referenceData);
     [DllImport("comctl32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool RemoveWindowSubclass(IntPtr window, SubclassProcedure procedure, UIntPtr subclassId);

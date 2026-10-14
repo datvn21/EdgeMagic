@@ -5,54 +5,170 @@
     Title="EdgeMagic">
   <Grid x:Name="Root" Background="#141414" Loaded="OnRootLoaded" PointerEntered="OnPointerEntered" PointerExited="OnPointerExited">
     <Border Margin="8" Padding="16" CornerRadius="16" Background="#1c1c1c" BorderBrush="#333333" BorderThickness="1">
-      <ScrollViewer VerticalScrollBarVisibility="Auto">
-      <StackPanel Spacing="12">
+      <Grid RowDefinitions="Auto,Auto,*,Auto">
         <Grid ColumnDefinitions="*,Auto,Auto">
           <TextBlock Text="EdgeMagic" FontSize="20" FontWeight="SemiBold" VerticalAlignment="Center" />
-          <Button Grid.Column="1" Margin="4,0" Content="← edge" Click="OnLeftEdge" />
-          <Button Grid.Column="2" Margin="4,0,0,0" Content="right edge" Click="OnRightEdge" />
+          <Button Grid.Column="1" Margin="4,0" Content="←" ToolTipService.ToolTip="Move to left edge" Click="OnLeftEdge" />
+          <Button Grid.Column="2" Margin="4,0,0,0" Content="→" ToolTipService.ToolTip="Move to right edge" Click="OnRightEdge" />
         </Grid>
-        <ComboBox x:Name="DisplayChoices" Header="Monitor" DisplayMemberPath="Name" SelectionChanged="OnDisplayChanged" />
-        <TextBlock Text="Move to the edge handle to reopen the shelf. Leaving the shelf collapses it." TextWrapping="Wrap" Foreground="#a1a1a1" />
-        <TextBlock x:Name="HotkeyStatus" Foreground="#a1a1a1" />
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Button Content="Collapse" Click="OnCollapse" />
-          <Button x:Name="PinButton" Content="Pin" Click="OnPinClick" />
-        </StackPanel>
-        <Border Height="1" Background="#333333" />
-        <TextBlock Text="Notes" FontSize="18" FontWeight="SemiBold" />
-        <TextBox x:Name="NoteInput" PlaceholderText="Write a note" AcceptsReturn="True" MinHeight="64" />
-        <Button Content="Add note" Click="OnAddNote" HorizontalAlignment="Left" />
-        <ListView x:Name="NotesList" MaxHeight="210" SelectionMode="None">
-          <ListView.ItemTemplate>
-            <DataTemplate>
-              <Grid ColumnDefinitions="*,Auto" Padding="0,4">
-                <StackPanel Spacing="2">
-                  <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
-                  <TextBlock Text="{Binding Content}" Foreground="#a1a1a1" TextWrapping="Wrap" MaxLines="3" />
-                </StackPanel>
-                <Button Grid.Column="1" Content="×" Tag="{Binding Id}" Click="OnDeleteNote" />
-              </Grid>
-            </DataTemplate>
-          </ListView.ItemTemplate>
-        </ListView>
-        <TextBlock Text="To do" FontSize="18" FontWeight="SemiBold" />
-        <TextBox x:Name="TodoInput" PlaceholderText="Add a task" />
-        <Button Content="Add task" Click="OnAddTodo" HorizontalAlignment="Left" />
-        <ListView x:Name="TodosList" MaxHeight="180" SelectionMode="None">
-          <ListView.ItemTemplate>
-            <DataTemplate>
-              <Grid ColumnDefinitions="Auto,*,Auto" Padding="0,2">
-                <CheckBox IsChecked="{Binding Completed}" Tag="{Binding Id}" Click="OnToggleTodo" />
-                <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                <Button Grid.Column="2" Content="×" Tag="{Binding Id}" Click="OnDeleteTodo" />
-              </Grid>
-            </DataTemplate>
-          </ListView.ItemTemplate>
-        </ListView>
-        <TextBlock x:Name="DataStatus" Foreground="#a1a1a1" TextWrapping="Wrap" />
-      </StackPanel>
-      </ScrollViewer>
+        <ComboBox x:Name="SectionChoices" Grid.Row="1" Margin="0,12,0,8" SelectedIndex="0" SelectionChanged="OnSectionChanged">
+          <ComboBoxItem Content="Inbox" />
+          <ComboBoxItem Content="Notes" />
+          <ComboBoxItem Content="To do" />
+          <ComboBoxItem Content="Reminders" />
+          <ComboBoxItem Content="Saved links" />
+          <ComboBoxItem Content="Bookmarks" />
+          <ComboBoxItem Content="Settings" />
+        </ComboBox>
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+          <Grid>
+            <StackPanel x:Name="InboxPanel" Spacing="10" AllowDrop="True" DragOver="OnInboxDragOver" Drop="OnInboxDrop">
+              <TextBlock Text="Capture something to keep it in your inbox." Foreground="#a1a1a1" TextWrapping="Wrap" />
+              <TextBlock Text="You can also drop files here." Foreground="#777777" />
+              <TextBox x:Name="CaptureInput" PlaceholderText="Paste text or a link" AcceptsReturn="True" MinHeight="64" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Capture" Click="OnAddCapture" />
+                <Button Content="Paste from clipboard" Click="OnPasteCapture" />
+              </StackPanel>
+              <ListView x:Name="CapturesList" SelectionMode="None">
+                <ListView.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,5">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Preview}" Foreground="#a1a1a1" TextWrapping="Wrap" MaxLines="3" />
+                        <TextBlock Text="{Binding Source}" FontSize="11" Foreground="#777777" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="×" Tag="{Binding Id}" Click="OnDeleteCapture" />
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
+            </StackPanel>
+            <StackPanel x:Name="NotesPanel" Spacing="10" Visibility="Collapsed">
+              <TextBlock Text="Notes" FontSize="18" FontWeight="SemiBold" />
+              <TextBox x:Name="NoteInput" PlaceholderText="Write a note" AcceptsReturn="True" MinHeight="72" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button x:Name="NoteSaveButton" Content="Add note" Click="OnAddNote" />
+                <Button x:Name="NoteCancelButton" Content="Cancel edit" Click="OnCancelNoteEdit" Visibility="Collapsed" />
+              </StackPanel>
+              <ListView x:Name="NotesList" SelectionMode="None">
+                <ListView.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto,Auto" Padding="0,5">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Content}" Foreground="#a1a1a1" TextWrapping="Wrap" MaxLines="5" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Edit" Tag="{Binding Id}" Click="OnEditNote" />
+                      <Button Grid.Column="2" Content="×" Tag="{Binding Id}" Click="OnDeleteNote" />
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
+            </StackPanel>
+            <StackPanel x:Name="TodosPanel" Spacing="10" Visibility="Collapsed">
+              <TextBlock Text="To do" FontSize="18" FontWeight="SemiBold" />
+              <TextBox x:Name="TodoInput" PlaceholderText="Add a task" />
+              <Button Content="Add task" Click="OnAddTodo" HorizontalAlignment="Left" />
+              <ListView x:Name="TodosList" SelectionMode="None">
+                <ListView.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="Auto,*,Auto" Padding="0,3">
+                      <CheckBox IsChecked="{Binding Completed}" Tag="{Binding Id}" Click="OnToggleTodo" />
+                      <TextBlock Grid.Column="1" Text="{Binding Title}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                      <Button Grid.Column="2" Content="×" Tag="{Binding Id}" Click="OnDeleteTodo" />
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
+            </StackPanel>
+            <StackPanel x:Name="RemindersPanel" Spacing="10" Visibility="Collapsed">
+              <TextBlock Text="Reminders" FontSize="18" FontWeight="SemiBold" />
+              <TextBox x:Name="ReminderInput" PlaceholderText="What should you remember?" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="In minutes" VerticalAlignment="Center" Foreground="#a1a1a1" />
+                <NumberBox x:Name="ReminderMinutes" Value="10" Minimum="1" Maximum="525600" SpinButtonPlacementMode="Compact" Width="110" />
+                <Button Content="Add" Click="OnAddReminder" />
+              </StackPanel>
+              <ListView x:Name="RemindersList" SelectionMode="None">
+                <ListView.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,5">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding When}" Foreground="#a1a1a1" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="×" Tag="{Binding Id}" Click="OnDeleteReminder" />
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
+            </StackPanel>
+            <StackPanel x:Name="SavedPanel" Spacing="10" Visibility="Collapsed">
+              <TextBlock Text="Saved links" FontSize="18" FontWeight="SemiBold" />
+              <TextBox x:Name="SavedTitleInput" PlaceholderText="Title" />
+              <TextBox x:Name="SavedUrlInput" PlaceholderText="https://example.com" />
+              <Button Content="Save link" Click="OnAddSaved" HorizontalAlignment="Left" />
+              <ListView x:Name="SavedList" SelectionMode="None">
+                <ListView.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,5">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Url}" Foreground="#a1a1a1" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="×" Tag="{Binding Id}" Click="OnDeleteSaved" />
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
+            </StackPanel>
+            <StackPanel x:Name="BookmarksPanel" Spacing="10" Visibility="Collapsed">
+              <TextBlock Text="Browser bookmarks" FontSize="18" FontWeight="SemiBold" />
+              <TextBlock Text="Paste the Bookmarks file exported from Chrome or Edge. Existing entries are merged by URL." Foreground="#a1a1a1" TextWrapping="Wrap" />
+              <TextBox x:Name="BookmarksInput" PlaceholderText="Paste Chrome or Edge Bookmarks JSON" AcceptsReturn="True" MinHeight="110" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Import bookmarks" Click="OnImportBookmarks" />
+                <Button Content="Clear imported" Click="OnClearBookmarks" />
+              </StackPanel>
+              <TextBlock x:Name="BookmarksStatus" Foreground="#a1a1a1" TextWrapping="Wrap" />
+              <ListView x:Name="BookmarksList" SelectionMode="None">
+                <ListView.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="*,Auto" Padding="0,5">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Url}" Foreground="#a1a1a1" TextWrapping="Wrap" />
+                      </StackPanel>
+                      <Button Grid.Column="1" Content="Open" Tag="{Binding Url}" Click="OnOpenBookmark" />
+                    </Grid>
+                  </DataTemplate>
+                </ListView.ItemTemplate>
+              </ListView>
+            </StackPanel>
+            <StackPanel x:Name="SettingsPanel" Spacing="12" Visibility="Collapsed">
+              <TextBlock Text="Settings" FontSize="18" FontWeight="SemiBold" />
+              <ComboBox x:Name="DisplayChoices" Header="Monitor" DisplayMemberPath="Name" SelectionChanged="OnDisplayChanged" />
+              <TextBlock Text="Move to the edge handle to reopen the shelf. Leaving the shelf collapses it." TextWrapping="Wrap" Foreground="#a1a1a1" />
+              <TextBlock x:Name="HotkeyStatus" Foreground="#a1a1a1" />
+              <CheckBox x:Name="ClipboardCaptureToggle" Content="Capture copied text automatically" IsChecked="True" Click="OnClipboardCaptureToggle" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Collapse" Click="OnCollapse" />
+                <Button x:Name="PinButton" Content="Pin" Click="OnPinClick" />
+              </StackPanel>
+              <TextBlock Text="Data &amp; backup" FontSize="16" FontWeight="SemiBold" Margin="0,8,0,0" />
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Content="Export backup" Click="OnExportBackup" />
+                <Button Content="Import backup" Click="OnImportBackup" />
+              </StackPanel>
+              <TextBlock Text="Backups include captures and local records. They are not encrypted. Attachment files are listed but not copied." Foreground="#a1a1a1" TextWrapping="Wrap" />
+              <TextBlock Text="The WinUI app uses the existing EdgeMagic local database. Close the Tauri app before opening this one." Foreground="#a1a1a1" TextWrapping="Wrap" />
+            </StackPanel>
+          </Grid>
+        </ScrollViewer>
+        <TextBlock x:Name="DataStatus" Grid.Row="3" Margin="0,10,0,0" Foreground="#a1a1a1" TextWrapping="Wrap" />
+      </Grid>
     </Border>
   </Grid>
 </Window>

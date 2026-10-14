@@ -1,12 +1,33 @@
-# WinUI 3 migration (in progress)
+# EdgeMagic WinUI 3
 
-The native shell supports left/right edge placement, monitor selection, pinning, auto-collapse, tray controls, and Ctrl+Space. Notes and Todo read and write the existing `%APPDATA%\app.edgemagic.desktop\edgemagic.db`; deletes are soft deletes. The app asks the user to close the legacy `edgemagic.exe` before opening the shared database.
+The WinUI app is an early Windows replacement for the Tauri desktop shell. It reads the existing SQLite database at `%APPDATA%\app.edgemagic.desktop\edgemagic.db` and currently provides:
 
-Build on a Windows development machine with .NET 10 SDK and Windows App SDK support:
+- Edge shelf positioning, monitor selection, auto-collapse, pinning, tray menu, and `Ctrl+Space`.
+- Inbox captures for pasted/copied text and links, plus files dropped from Explorer.
+- Notes create, edit, and soft-delete actions; to-do create, complete, and soft-delete actions.
+- Reminders and saved links with soft-delete actions.
+- Chrome/Edge bookmark JSON import, merged by URL and stored in the existing bookmark setting; links open in the default browser.
+- A setting to turn automatic clipboard text capture on or off.
+- JSON backup export/import using the existing EdgeMagic backup format.
+
+## Run from source
+
+Use Windows with the .NET 10 SDK. Open the existing Tauri app once so its database exists, then close it before starting WinUI. Both apps must not write to the same database at the same time.
 
 ```powershell
-dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj
 dotnet run --project apps/winui/EdgeMagic.App/EdgeMagic.App.csproj
 ```
 
-The migration is not at feature parity: capture/inbox, reminders, saved items, bookmarks, settings, sync, true window transparency/rounded native region, packaging, and data compatibility validation remain. Keep the Tauri app until those workflows and upgrade behavior have been verified.
+To compile without launching:
+
+```powershell
+dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj
+```
+
+The app refuses to create a new database if the Tauri database is missing. Notes, tasks, reminders, and saved links use the same tables as the existing app; captures are stored in its `items` and `item_search` tables. Deletes set `deleted_at` and preserve the row.
+
+## Not ready to replace the released app
+
+The WinUI build is not yet at feature parity. Remaining work includes image capture, broader settings migration and persistence, reminder notifications, sync queue integration, keyboard/accessibility review, transparent native window corners, data compatibility checks on a separate database copy, and MSIX packaging and upgrade validation. Continue to keep the Tauri app available until those are complete.
+
+Backups are not encrypted. They include attachment metadata but do not copy the attachment files themselves; retain the original app-data folder when moving machines or reinstalling.
