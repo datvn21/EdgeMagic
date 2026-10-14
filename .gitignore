@@ -7,6 +7,8 @@ dist-web/
 packages/*/dist/
 apps/*/dist/
 apps/*/dist-web/
+apps/winui/**/bin/
+apps/winui/**/obj/
 
 # ─── TypeScript ───────────────────────────────────────────────────────────────
 *.tsbuildinfo
