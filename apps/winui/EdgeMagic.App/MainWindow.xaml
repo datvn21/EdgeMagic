@@ -153,6 +153,7 @@
               <TextBlock Text="Move to the edge handle to reopen the shelf. Leaving the shelf collapses it." TextWrapping="Wrap" Foreground="#a1a1a1" />
               <TextBlock x:Name="HotkeyStatus" Foreground="#a1a1a1" />
               <CheckBox x:Name="ClipboardCaptureToggle" Content="Capture copied text automatically" IsChecked="True" Click="OnClipboardCaptureToggle" />
+              <TextBlock x:Name="SyncQueueStatus" Foreground="#a1a1a1" TextWrapping="Wrap" />
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <Button Content="Collapse" Click="OnCollapse" />
                 <Button x:Name="PinButton" Content="Pin" Click="OnPinClick" />

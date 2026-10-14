@@ -60,6 +60,12 @@ internal sealed class ProductivityStore
             CREATE TABLE IF NOT EXISTS settings (
                 key TEXT PRIMARY KEY, value_json TEXT NOT NULL, updated_at INTEGER NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS sync_queue (
+                id TEXT PRIMARY KEY, entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, operation TEXT NOT NULL,
+                payload_json TEXT NOT NULL, status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+                last_error TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_sync_queue_entity ON sync_queue(entity_type, entity_id);
             CREATE INDEX IF NOT EXISTS idx_notes_updated_at ON notes(updated_at);
             CREATE INDEX IF NOT EXISTS idx_todos_updated_at ON todos(updated_at);
             CREATE INDEX IF NOT EXISTS idx_reminders_updated_at ON reminders(updated_at);
@@ -74,6 +80,48 @@ internal sealed class ProductivityStore
               SELECT json_extract(payload_json, '$.id'), json_extract(payload_json, '$.title'), json_extract(payload_json, '$.url'), json_extract(payload_json, '$.path'), json_extract(payload_json, '$.sourceItemId'), created_at, updated_at, deleted_at FROM module_records WHERE kind = 'saved';
             """;
         await command.ExecuteNonQueryAsync();
+        await EnsureSyncQueueTriggersAsync();
+    }
+
+    public async Task<int> GetPendingSyncCountAsync()
+    {
+        await using var connection = await OpenAsync();
+        await using var command = connection.CreateCommand();
+        command.CommandText = "SELECT COUNT(*) FROM sync_queue WHERE status IN ('pending','failed')";
+        return Convert.ToInt32(await command.ExecuteScalarAsync());
+    }
+
+    private async Task EnsureSyncQueueTriggersAsync()
+    {
+        var syncedTables = new (string Table, string EntityType, string Payload)[]
+        {
+            ("notes", "module-record", "json_object('id',NEW.id,'title',NEW.title,'content',NEW.content,'sourceItemId',NEW.source_item_id,'createdAt',NEW.created_at,'updatedAt',NEW.updated_at,'deletedAt',NEW.deleted_at)"),
+            ("todos", "module-record", "json_object('id',NEW.id,'title',NEW.title,'completed',json(CASE WHEN NEW.completed=0 THEN 'false' ELSE 'true' END),'sourceItemId',NEW.source_item_id,'createdAt',NEW.created_at,'updatedAt',NEW.updated_at,'deletedAt',NEW.deleted_at)"),
+            ("reminders", "module-record", "json_object('id',NEW.id,'title',NEW.title,'remindAt',NEW.remind_at,'status',NEW.status,'sourceItemId',NEW.source_item_id,'createdAt',NEW.created_at,'updatedAt',NEW.updated_at,'deletedAt',NEW.deleted_at)"),
+            ("saved_items", "module-record", "json_object('id',NEW.id,'title',NEW.title,'url',NEW.url,'path',NEW.path,'sourceItemId',NEW.source_item_id,'createdAt',NEW.created_at,'updatedAt',NEW.updated_at,'deletedAt',NEW.deleted_at)"),
+            ("items", "item", "json_object('id',NEW.id,'type',NEW.type,'title',NEW.title,'content',NEW.content,'url',NEW.url,'path',NEW.path,'source',NEW.source,'metadata',json(NEW.metadata_json),'createdAt',NEW.created_at,'updatedAt',NEW.updated_at,'deletedAt',NEW.deleted_at)")
+        };
+
+        await using var connection = await OpenAsync();
+        foreach (var (table, entityType, payload) in syncedTables)
+        foreach (var operation in new[] { "INSERT", "UPDATE" })
+        {
+            var name = $"edgemagic_sync_{table}_{operation.ToLowerInvariant()}";
+            var enqueueOperation = operation == "INSERT"
+                ? "CASE WHEN NEW.deleted_at IS NULL THEN 'create' ELSE 'delete' END"
+                : "CASE WHEN NEW.deleted_at IS NULL THEN 'update' ELSE 'delete' END";
+            await using var trigger = connection.CreateCommand();
+            trigger.CommandText = $"""
+                CREATE TRIGGER IF NOT EXISTS {name} AFTER {operation} ON {table}
+                BEGIN
+                  INSERT INTO sync_queue(id,entity_type,entity_id,operation,payload_json,status,attempts,last_error,created_at,updated_at)
+                  VALUES(lower(hex(randomblob(16))),'{entityType}',NEW.id,{enqueueOperation},{payload},'pending',0,NULL,NEW.updated_at,NEW.updated_at)
+                  ON CONFLICT(entity_type,entity_id) DO UPDATE SET operation=excluded.operation,payload_json=excluded.payload_json,
+                    status='pending',attempts=0,last_error=NULL,updated_at=excluded.updated_at;
+                END;
+                """;
+            await trigger.ExecuteNonQueryAsync();
+        }
     }
 
     public async Task<(List<NoteItem> Notes, List<TodoItem> Todos, List<ReminderItem> Reminders, List<SavedItem> Saved, List<CaptureItem> Captures)> LoadAsync()

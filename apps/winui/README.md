@@ -9,6 +9,7 @@ The WinUI app is an early Windows replacement for the Tauri desktop shell. It re
 - Chrome/Edge bookmark JSON import, merged by URL and stored in the existing bookmark setting; links open in the default browser.
 - A setting to turn automatic clipboard text capture on or off.
 - JSON backup export/import using the existing EdgeMagic backup format.
+- SQLite triggers that enqueue notes, tasks, reminders, saved links, and captures into the existing `sync_queue`; Settings shows pending/failed queue size.
 
 ## Run from source
 
@@ -28,6 +29,6 @@ The app refuses to create a new database if the Tauri database is missing. Notes
 
 ## Not ready to replace the released app
 
-The WinUI build is not yet at feature parity. Remaining work includes image capture, broader settings migration and persistence, reminder notifications, sync queue integration, keyboard/accessibility review, transparent native window corners, data compatibility checks on a separate database copy, and MSIX packaging and upgrade validation. Continue to keep the Tauri app available until those are complete.
+The WinUI build is not yet at feature parity. Remaining work includes image capture, broader settings migration and persistence, reminder notifications, an actual sync provider/worker, keyboard/accessibility review, transparent native window corners, data compatibility checks on a separate database copy, and MSIX packaging and upgrade validation. Continue to keep the Tauri app available until those are complete.
 
 Backups are not encrypted. They include attachment metadata but do not copy the attachment files themselves; retain the original app-data folder when moving machines or reinstalling.

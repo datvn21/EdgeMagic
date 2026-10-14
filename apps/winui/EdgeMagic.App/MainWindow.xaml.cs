@@ -387,6 +387,7 @@ public sealed partial class MainWindow : Window
             ApplyLayout();
             var (notes, todos, reminders, saved, captures) = await _productivity.LoadAsync();
             _bookmarks = await _productivity.GetBookmarksAsync();
+            var pendingSync = await _productivity.GetPendingSyncCountAsync();
             _notes = notes;
             NotesList.ItemsSource = notes;
             TodosList.ItemsSource = todos;
@@ -394,6 +395,7 @@ public sealed partial class MainWindow : Window
             SavedList.ItemsSource = saved;
             BookmarksList.ItemsSource = _bookmarks;
             BookmarksStatus.Text = $"{_bookmarks.Count} imported bookmarks.";
+            SyncQueueStatus.Text = $"{pendingSync} local changes queued. Sync providers are not enabled in this WinUI build.";
             CapturesList.ItemsSource = captures.Select(item => new CaptureRow(item.Id, item.Title ?? item.Url ?? item.Path ?? "Capture", item.Content ?? item.Url ?? item.Path ?? item.Type, item.Source)).ToList();
             DataStatus.Text = $"Local data · {captures.Count} captures · {notes.Count} notes · {todos.Count} tasks · {reminders.Count} reminders · {saved.Count} saved";
             _dataLoaded = true;
