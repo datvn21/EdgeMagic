@@ -27,6 +27,14 @@ To compile without launching:
 dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj
 ```
 
+To create a locally signed x64 MSIX package:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File apps/winui/build-package.ps1
+```
+
+The script creates a local development signing certificate and puts the public `.cer` beside the package. Run the generated `Install.ps1` in the package folder to sideload it; Windows will ask before trusting that certificate. This certificate is for local development only, not public distribution. A production release needs an organization/store publisher certificate.
+
 The app refuses to create a new database if the Tauri database is missing. Notes, tasks, reminders, and saved links use the same tables as the existing app; captures are stored in its `items` and `item_search` tables. Deletes set `deleted_at` and preserve the row.
 
 ## Not ready to replace the released app

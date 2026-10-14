@@ -78,8 +78,9 @@ The current implementation blocks Notes/Todo access while the legacy `edgemagic.
 - Added backup file pickers for the existing EdgeMagic JSON backup format. The UI warns that backups are unencrypted and attachment files are not copied.
 - Added idempotent SQLite triggers that enqueue local item and productivity changes in the existing `sync_queue`; Settings reports pending and failed entries. No sync provider or worker is enabled yet.
 - Added clipboard image capture to a managed app-data attachment file and Windows App Notifications for due reminders while the app process is running.
+- Added single-project MSIX manifest/assets and an x64 package build script. The local package builds and is signed with a user-local development certificate; Windows sideload installation still requires trusting that certificate.
 - Confirmed the expected `%APPDATA%\app.edgemagic.desktop\edgemagic.db` file exists and, in a read-only inspection, contains the released SQLx migration records and required tables. No user database rows were changed during that inspection.
 - `dotnet build apps/winui/EdgeMagic.App/EdgeMagic.App.csproj --no-restore` succeeds with zero warnings and errors.
 - The legacy `edgemagic` process is currently running, so the WinUI app has not been launched against the real database. It intentionally refuses concurrent access.
 
-Still required before replacing Tauri: test writes on a separate copy of the actual database; finish reminders when the app is not running, sync provider/worker, settings parity, accessibility, true transparent window regions, and MSIX install/upgrade validation. Keep the Tauri app available.
+Still required before replacing Tauri: verify writes on a separate copy of the actual database; validate MSIX install/upgrade and data retention on a clean install; finish reminders when the app is not running, sync provider/worker, settings parity, accessibility, and true transparent window regions. Keep the Tauri app available.
